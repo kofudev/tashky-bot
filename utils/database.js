@@ -39,6 +39,7 @@ class Database {
             path.join(this.basePath, 'users'),
             path.join(this.basePath, 'sanctions'),
             path.join(this.basePath, 'tickets'),
+            path.join(this.basePath, 'channels'),
             path.join(this.basePath, 'backups')
         ];
 
@@ -57,8 +58,12 @@ class Database {
         this.ensureFile('sanctions/warnings.json', { warnings: [], lastUpdated: new Date() });
         this.ensureFile('sanctions/bans.json', { bans: [], lastUpdated: new Date() });
         this.ensureFile('sanctions/mutes.json', { mutes: [], lastUpdated: new Date() });
+        this.ensureFile('sanctions/global_bans.json', { bans: [], lastUpdated: new Date() });
         this.ensureFile('tickets/active.json', { tickets: [], lastUpdated: new Date() });
         this.ensureFile('tickets/closed.json', { tickets: [], lastUpdated: new Date() });
+        this.ensureFile('channels/locks.json', { locks: [], lastUpdated: new Date() });
+        this.ensureFile('channels/modifications.json', { modifications: [], lastUpdated: new Date() });
+        this.ensureFile('backups/list.json', { backups: [], lastUpdated: new Date() });
     }
 
     /**

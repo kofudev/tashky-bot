@@ -1,10 +1,10 @@
 /**
  * ====================================
- * COMMANDE: /lock
+ * COMMANDE: /unlock
  * ====================================
  * 
- * Verrouiller un salon
- * Empêcher les membres d'envoyer des messages
+ * Déverrouiller un salon
+ * Permettre aux membres d'envoyer des messages
  * 
  * @author Kofu (github.com/kofudev)
  * @category Moderation
@@ -16,23 +16,23 @@ const KofuSignature = require('../../utils/kofu-signature');
 
 module.exports = {
     data: new SlashCommandBuilder()
-        .setName('lock')
-        .setDescription('🔒 Verrouiller un salon')
+        .setName('unlock')
+        .setDescription('🔓 Déverrouiller un salon')
         .addChannelOption(option =>
             option.setName('salon')
-                .setDescription('Salon à verrouiller (salon actuel par défaut)')
+                .setDescription('Salon à déverrouiller (salon actuel par défaut)')
                 .setRequired(false)
                 .addChannelTypes(ChannelType.GuildText, ChannelType.GuildNews, ChannelType.GuildForum)
         )
         .addStringOption(option =>
             option.setName('raison')
-                .setDescription('Raison du verrouillage')
+                .setDescription('Raison du déverrouillage')
                 .setRequired(false)
                 .setMaxLength(512)
         )
         .addBooleanOption(option =>
             option.setName('annoncer')
-                .setDescription('Annoncer le verrouillage dans le salon (défaut: true)')
+                .setDescription('Annoncer le déverrouillage dans le salon (défaut: true)')
                 .setRequired(false)
         )
         .setDefaultMemberPermissions(PermissionFlagsBits.ManageChannels),
@@ -44,7 +44,7 @@ module.exports = {
     botPermissions: ['ManageChannels'],
     
     /**
-     * Exécution de la commande lock
+     * Exécution de la commande unlock
      * @param {ChatInputCommandInteraction} interaction - L'interaction Discord
      * @author Kofu
      */
@@ -60,51 +60,61 @@ module.exports = {
         }
         
         try {
-            // Vérifier si le salon est déjà verrouillé
+            // Vérifier si le salon est verrouillé
             const everyoneRole = interaction.guild.roles.everyone;
             const currentPermissions = targetChannel.permissionOverwrites.cache.get(everyoneRole.id);
             
-            if (currentPermissions && currentPermissions.deny.has(PermissionFlagsBits.SendMessages)) {
+            if (!currentPermissions || !currentPermissions.deny.has(PermissionFlagsBits.SendMessages)) {
                 const errorEmbed = KofuSignature.createErrorEmbed(
-                    'Salon déjà verrouillé !',
-                    `Le salon ${targetChannel} est déjà verrouillé.`
+                    'Salon pas verrouillé !',
+                    `Le salon ${targetChannel} n'est pas actuellement verrouillé.`
                 );
                 return interaction.reply({ embeds: [errorEmbed], ephemeral: true });
             }
             
             // Créer l'embed de confirmation
             const confirmEmbed = new EmbedBuilder()
-                .setTitle('🔒 Verrouillage en cours...')
-                .setDescription(`Verrouillage de ${targetChannel} en cours...`)
-                .setColor('#F04747')
+                .setTitle('🔓 Déverrouillage en cours...')
+                .setDescription(`Déverrouillage de ${targetChannel} en cours...`)
+                .setColor('#43B581')
                 .setFooter(KofuSignature.getKofuFooter())
                 .setTimestamp();
             
             await interaction.reply({ embeds: [confirmEmbed] });
             
-            // Sauvegarder les permissions actuelles
-            const originalPermissions = currentPermissions ? {
-                allow: currentPermissions.allow.bitfield,
-                deny: currentPermissions.deny.bitfield
-            } : null;
+            // Récupérer les permissions originales depuis la base de données
+            const originalPermissions = await getOriginalPermissions(interaction.client, targetChannel.id);
             
-            // Verrouiller le salon
-            await targetChannel.permissionOverwrites.edit(everyoneRole, {
-                SendMessages: false,
-                SendMessagesInThreads: false,
-                CreatePublicThreads: false,
-                CreatePrivateThreads: false
-            }, {
-                reason: `[LOCK] ${reason} | Modérateur: ${interaction.user.tag}`
-            });
+            // Déverrouiller le salon
+            if (originalPermissions) {
+                // Restaurer les permissions originales
+                await targetChannel.permissionOverwrites.edit(everyoneRole, {
+                    SendMessages: null,
+                    SendMessagesInThreads: null,
+                    CreatePublicThreads: null,
+                    CreatePrivateThreads: null
+                }, {
+                    reason: `[UNLOCK] ${reason} | Modérateur: ${interaction.user.tag}`
+                });
+            } else {
+                // Simplement retirer les restrictions
+                await targetChannel.permissionOverwrites.edit(everyoneRole, {
+                    SendMessages: null,
+                    SendMessagesInThreads: null,
+                    CreatePublicThreads: null,
+                    CreatePrivateThreads: null
+                }, {
+                    reason: `[UNLOCK] ${reason} | Modérateur: ${interaction.user.tag}`
+                });
+            }
             
-            // Enregistrer dans la base de données
-            await saveLockToDatabase(interaction, targetChannel, reason, originalPermissions);
+            // Mettre à jour la base de données
+            await updateLockInDatabase(interaction, targetChannel, reason);
             
             // Créer l'embed de succès
             const successEmbed = KofuSignature.createSuccessEmbed(
-                'Salon verrouillé !',
-                `${targetChannel} a été verrouillé avec succès.`
+                'Salon déverrouillé !',
+                `${targetChannel} a été déverrouillé avec succès.`
             );
             
             successEmbed.addFields(
@@ -112,20 +122,20 @@ module.exports = {
                 { name: '🛡️ Modérateur', value: `${interaction.user.tag}\n\`${interaction.user.id}\``, inline: true },
                 { name: '📝 Raison', value: reason, inline: false },
                 { name: '📅 Date', value: `<t:${Math.floor(Date.now() / 1000)}:F>`, inline: true },
-                { name: '🔒 Information', value: 'Les membres ne peuvent plus envoyer de messages dans ce salon.', inline: false }
+                { name: '🔓 Information', value: 'Les membres peuvent maintenant envoyer des messages dans ce salon.', inline: false }
             );
             
             await interaction.editReply({ embeds: [successEmbed] });
             
             // Annoncer dans le salon si demandé
             if (announce && targetChannel.id !== interaction.channel.id) {
-                await sendLockAnnouncement(targetChannel, reason, interaction.user);
+                await sendUnlockAnnouncement(targetChannel, reason, interaction.user);
             }
             
             // Logger l'action
             interaction.client.logger.logModeration(
                 interaction.user,
-                'LOCK',
+                'UNLOCK',
                 null,
                 {
                     guild: interaction.guild,
@@ -137,14 +147,14 @@ module.exports = {
             // Envoyer dans le salon de logs si configuré
             await sendToModerationLogs(interaction, targetChannel, reason);
             
-            console.log(`🔒 [Kofu] Salon #${targetChannel.name} verrouillé sur ${interaction.guild.name} par ${interaction.user.tag}`);
+            console.log(`🔓 [Kofu] Salon #${targetChannel.name} déverrouillé sur ${interaction.guild.name} par ${interaction.user.tag}`);
             
         } catch (error) {
-            console.error('❌ [Kofu] Erreur lors du verrouillage:', error);
+            console.error('❌ [Kofu] Erreur lors du déverrouillage:', error);
             
             const errorEmbed = KofuSignature.createErrorEmbed(
-                'Erreur lors du verrouillage !',
-                `Impossible de verrouiller ${targetChannel}.\n\n**Erreur:** \`${error.message}\``
+                'Erreur lors du déverrouillage !',
+                `Impossible de déverrouiller ${targetChannel}.\n\n**Erreur:** \`${error.message}\``
             );
             
             await interaction.editReply({ embeds: [errorEmbed] });
@@ -166,7 +176,7 @@ function performSecurityChecks(interaction, targetChannel) {
             success: false,
             embed: KofuSignature.createErrorEmbed(
                 'Salon invalide !',
-                'Tu ne peux pas verrouiller un salon d\'un autre serveur !'
+                'Tu ne peux pas déverrouiller un salon d\'un autre serveur !'
             )
         };
     }
@@ -178,7 +188,7 @@ function performSecurityChecks(interaction, targetChannel) {
             success: false,
             embed: KofuSignature.createErrorEmbed(
                 'Type de salon invalide !',
-                'Seuls les salons textuels, d\'annonces ou de forum peuvent être verrouillés.'
+                'Seuls les salons textuels, d\'annonces ou de forum peuvent être déverrouillés.'
             )
         };
     }
@@ -209,29 +219,53 @@ function performSecurityChecks(interaction, targetChannel) {
 }
 
 /**
- * Envoyer l'annonce de verrouillage dans le salon
- * @param {Channel} channel - Le salon verrouillé
- * @param {string} reason - Raison du verrouillage
+ * Récupérer les permissions originales depuis la base de données
+ * @param {Client} client - Le client Discord
+ * @param {string} channelId - ID du salon
+ * @returns {object|null} Permissions originales ou null
+ * @author Kofu
+ */
+async function getOriginalPermissions(client, channelId) {
+    try {
+        const locksData = client.database.read('channels/locks.json') || { locks: [], lastUpdated: new Date() };
+        
+        // Trouver le verrouillage actif le plus récent pour ce salon
+        const activeLock = locksData.locks
+            .filter(l => l.channelId === channelId && l.active)
+            .sort((a, b) => new Date(b.timestamp) - new Date(a.timestamp))[0];
+        
+        return activeLock ? activeLock.originalPermissions : null;
+        
+    } catch (error) {
+        console.error('❌ [Kofu] Erreur récupération permissions originales:', error);
+        return null;
+    }
+}
+
+/**
+ * Envoyer l'annonce de déverrouillage dans le salon
+ * @param {Channel} channel - Le salon déverrouillé
+ * @param {string} reason - Raison du déverrouillage
  * @param {User} moderator - Le modérateur
  * @author Kofu
  */
-async function sendLockAnnouncement(channel, reason, moderator) {
+async function sendUnlockAnnouncement(channel, reason, moderator) {
     try {
         const announcementEmbed = new EmbedBuilder()
-            .setTitle('🔒 Salon Verrouillé')
-            .setDescription('Ce salon a été temporairement verrouillé par un modérateur.')
-            .setColor('#F04747')
+            .setTitle('🔓 Salon Déverrouillé')
+            .setDescription('Ce salon a été déverrouillé ! Vous pouvez maintenant envoyer des messages.')
+            .setColor('#43B581')
             .addFields(
                 { name: '🛡️ Modérateur', value: moderator.tag, inline: true },
                 { name: '📝 Raison', value: reason, inline: true },
                 { name: '📅 Date', value: `<t:${Math.floor(Date.now() / 1000)}:F>`, inline: true },
-                { name: '💡 Information', value: 'Seuls les modérateurs peuvent envoyer des messages pour le moment.', inline: false }
+                { name: '✅ Information', value: 'N\'oubliez pas de respecter les règles du serveur !', inline: false }
             )
             .setFooter(KofuSignature.getKofuFooter())
             .setTimestamp();
         
         await channel.send({ embeds: [announcementEmbed] });
-        console.log(`📢 [Kofu] Annonce de verrouillage envoyée dans #${channel.name}`);
+        console.log(`📢 [Kofu] Annonce de déverrouillage envoyée dans #${channel.name}`);
         
     } catch (error) {
         console.log(`⚠️ [Kofu] Impossible d'envoyer l'annonce dans #${channel.name}: ${error.message}`);
@@ -239,48 +273,44 @@ async function sendLockAnnouncement(channel, reason, moderator) {
 }
 
 /**
- * Sauvegarder le verrouillage dans la base de données
+ * Mettre à jour le verrouillage dans la base de données
  * @param {ChatInputCommandInteraction} interaction - L'interaction Discord
- * @param {Channel} targetChannel - Le salon verrouillé
- * @param {string} reason - Raison du verrouillage
- * @param {object} originalPermissions - Permissions originales
+ * @param {Channel} targetChannel - Le salon déverrouillé
+ * @param {string} reason - Raison du déverrouillage
  * @author Kofu
  */
-async function saveLockToDatabase(interaction, targetChannel, reason, originalPermissions) {
+async function updateLockInDatabase(interaction, targetChannel, reason) {
     try {
-        const lockData = {
-            channelId: targetChannel.id,
-            channelName: targetChannel.name,
-            guildId: interaction.guild.id,
-            guildName: interaction.guild.name,
-            moderatorId: interaction.user.id,
-            moderatorTag: interaction.user.tag,
-            reason: reason,
-            timestamp: new Date(),
-            type: 'lock',
-            active: true,
-            originalPermissions: originalPermissions
-        };
-        
-        // Ajouter à la liste des verrouillages
+        // Marquer le verrouillage comme inactif dans la base de données
         const locksData = interaction.client.database.read('channels/locks.json') || { locks: [], lastUpdated: new Date() };
-        locksData.locks.push(lockData);
-        locksData.lastUpdated = new Date();
         
+        // Trouver le verrouillage actif le plus récent pour ce salon
+        const activeLock = locksData.locks
+            .filter(l => l.channelId === targetChannel.id && l.active)
+            .sort((a, b) => new Date(b.timestamp) - new Date(a.timestamp))[0];
+        
+        if (activeLock) {
+            activeLock.active = false;
+            activeLock.unlockDate = new Date();
+            activeLock.unlockedBy = interaction.user.id;
+            activeLock.unlockReason = reason;
+        }
+        
+        locksData.lastUpdated = new Date();
         interaction.client.database.write('channels/locks.json', locksData);
         
-        console.log(`💾 [Kofu] Verrouillage sauvegardé en base de données pour #${targetChannel.name}`);
+        console.log(`💾 [Kofu] Déverrouillage sauvegardé en base de données pour #${targetChannel.name}`);
         
     } catch (error) {
-        console.error('❌ [Kofu] Erreur sauvegarde verrouillage:', error);
+        console.error('❌ [Kofu] Erreur sauvegarde déverrouillage:', error);
     }
 }
 
 /**
  * Envoyer le log dans le salon de modération
  * @param {ChatInputCommandInteraction} interaction - L'interaction Discord
- * @param {Channel} targetChannel - Le salon verrouillé
- * @param {string} reason - Raison du verrouillage
+ * @param {Channel} targetChannel - Le salon déverrouillé
+ * @param {string} reason - Raison du déverrouillage
  * @author Kofu
  */
 async function sendToModerationLogs(interaction, targetChannel, reason) {
@@ -294,8 +324,8 @@ async function sendToModerationLogs(interaction, targetChannel, reason) {
         if (!logChannel) return;
         
         const logEmbed = new EmbedBuilder()
-            .setTitle('🔒 Salon Verrouillé')
-            .setColor('#F04747')
+            .setTitle('🔓 Salon Déverrouillé')
+            .setColor('#43B581')
             .addFields(
                 { name: '📺 Salon', value: `${targetChannel.name}\n\`${targetChannel.id}\``, inline: true },
                 { name: '🛡️ Modérateur', value: `${interaction.user.tag}\n\`${interaction.user.id}\``, inline: true },
@@ -306,7 +336,7 @@ async function sendToModerationLogs(interaction, targetChannel, reason) {
             .setTimestamp();
         
         await logChannel.send({ embeds: [logEmbed] });
-        console.log(`📝 [Kofu] Log de verrouillage envoyé dans ${logChannel.name}`);
+        console.log(`📝 [Kofu] Log de déverrouillage envoyé dans ${logChannel.name}`);
         
     } catch (error) {
         console.error('❌ [Kofu] Erreur envoi log modération:', error);
