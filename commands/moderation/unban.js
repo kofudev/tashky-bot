@@ -184,7 +184,7 @@ async function sendUnbanNotification(user, guild, reason, moderator) {
                 { name: '📝 Raison', value: reason, inline: false },
                 { name: '📅 Date', value: `<t:${Math.floor(Date.now() / 1000)}:F>`, inline: true },
                 { name: '✅ Information', value: 'Tu peux maintenant rejoindre le serveur à nouveau ! Assure-toi de respecter les règles.', inline: false },
-                { name: '🔗 Lien d\'invitation', value: `[Rejoindre ${guild.name}](https://discord.gg/invite)`, inline: false }
+                { name: '🔗 Lien d\'invitation', value: `[Rejoindre ${guild.name}](https://discord.gg/your-invite)`, inline: false }
             )
             .setFooter(KofuSignature.getKofuFooter())
             .setTimestamp();

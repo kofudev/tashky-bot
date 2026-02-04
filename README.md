@@ -144,7 +144,7 @@ DISCORD_CLIENT_ID=votre_client_id
 DISCORD_CLIENT_SECRET=votre_client_secret
 
 # Owners (IDs Discord)
-BOT_OWNERS=["863848649439838248"]
+BOT_OWNERS=["YOUR_DISCORD_ID_HERE"]
 
 # Panel Web
 DASHBOARD_PORT=57010
@@ -319,7 +319,7 @@ in the Software without restriction...
 
 <div align="center">
 
-<img src="./assets/images/kofu-avatar.png" width="100" style="border-radius: 50%"/>
+<img src="https://via.placeholder.com/100x100/5865F2/FFFFFF?text=KOFU" width="100" style="border-radius: 50%"/>
 
 **Kofu**
 
@@ -346,7 +346,7 @@ Besoin d'aide ? Rejoins notre serveur Discord !
 
 [![Discord Server](https://img.shields.io/discord/VOTRE_ID?color=5865F2&label=Support%20Server&logo=discord&logoColor=white)](#)
 
-[**Rejoindre le Serveur de Support**](https://discord.gg/votre-lien)
+[**Rejoindre le Serveur de Support**](https://discord.gg/your-support-server)
 
 </div>
 

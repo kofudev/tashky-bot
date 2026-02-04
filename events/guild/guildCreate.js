@@ -133,7 +133,7 @@ async function sendWelcomeMessage(guild, client) {
                     name: '🔗 Liens Utiles',
                     value: 
                         `[📖 Documentation](https://github.com/kofudev/tashky-bot)\\n` +
-                        `[💬 Support](https://discord.gg/support)\\n` +
+                        `[💬 Support](https://discord.gg/your-support)\\n` +
                         `[⭐ GitHub](https://github.com/kofudev)`,
                     inline: false
                 }
@@ -155,7 +155,7 @@ async function sendWelcomeMessage(guild, client) {
                 new ButtonBuilder()
                     .setLabel('💬 Support')
                     .setStyle(ButtonStyle.Link)
-                    .setURL('https://discord.gg/support'),
+                    .setURL('https://discord.gg/your-support'),
                 new ButtonBuilder()
                     .setLabel('⭐ GitHub')
                     .setStyle(ButtonStyle.Link)

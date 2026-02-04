@@ -31,11 +31,11 @@
     },
     "footer": {
       "text": "✨ Made with ❤️ by Kofu | TASHKY Bot v{version}",
-      "icon": "https://i.imgur.com/kofu-avatar.png"
+      "icon": "https://cdn.discordapp.com/embed/avatars/0.png"
     }
   },
   "links": {
-    "support": "https://discord.gg/votre-serveur",
+    "support": "https://discord.gg/your-support-server",
     "invite": "https://discord.com/api/oauth2/authorize?client_id=VOTRE_ID&permissions=8&scope=bot%20applications.commands",
     "github": "https://github.com/kofudev/tashky-bot",
     "website": "https://votre-site.com",

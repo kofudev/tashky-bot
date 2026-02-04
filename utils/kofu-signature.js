@@ -56,7 +56,7 @@ class KofuSignature {
             .setColor(color)
             .setFooter({
                 text: '✨ Made with ❤️ by Kofu | TASHKY Bot',
-                iconURL: 'https://i.imgur.com/kofu-avatar.png'
+                iconURL: 'https://cdn.discordapp.com/embed/avatars/0.png'
             })
             .setTimestamp();
     }
@@ -75,7 +75,7 @@ class KofuSignature {
             .setColor('#F04747')
             .setFooter({
                 text: '✨ Made with ❤️ by Kofu | TASHKY Bot',
-                iconURL: 'https://i.imgur.com/kofu-avatar.png'
+                iconURL: 'https://cdn.discordapp.com/embed/avatars/0.png'
             })
             .setTimestamp();
     }
@@ -94,7 +94,7 @@ class KofuSignature {
             .setColor('#43B581')
             .setFooter({
                 text: '✨ Made with ❤️ by Kofu | TASHKY Bot',
-                iconURL: 'https://i.imgur.com/kofu-avatar.png'
+                iconURL: 'https://cdn.discordapp.com/embed/avatars/0.png'
             })
             .setTimestamp();
     }
@@ -113,7 +113,7 @@ class KofuSignature {
             .setColor('#FAA61A')
             .setFooter({
                 text: '✨ Made with ❤️ by Kofu | TASHKY Bot',
-                iconURL: 'https://i.imgur.com/kofu-avatar.png'
+                iconURL: 'https://cdn.discordapp.com/embed/avatars/0.png'
             })
             .setTimestamp();
     }
@@ -132,7 +132,7 @@ class KofuSignature {
             .setColor('#00B0F4')
             .setFooter({
                 text: '✨ Made with ❤️ by Kofu | TASHKY Bot',
-                iconURL: 'https://i.imgur.com/kofu-avatar.png'
+                iconURL: 'https://cdn.discordapp.com/embed/avatars/0.png'
             })
             .setTimestamp();
     }
@@ -145,7 +145,7 @@ class KofuSignature {
     static getKofuFooter() {
         return {
             text: '✨ Made with ❤️ by Kofu | TASHKY Bot',
-            iconURL: 'https://i.imgur.com/kofu-avatar.png'
+            iconURL: 'https://cdn.discordapp.com/embed/avatars/0.png'
         };
     }
 
@@ -281,10 +281,10 @@ class KofuSignature {
                 { name: '🎯 Mission', value: 'Créer des outils qui améliorent l\'expérience Discord', inline: false }
             )
             .setColor('#FF69B4')
-            .setThumbnail('https://i.imgur.com/kofu-avatar.png')
+            .setThumbnail('https://cdn.discordapp.com/embed/avatars/0.png')
             .setFooter({
                 text: '✨ Made with ❤️ by Kofu | TASHKY Bot',
-                iconURL: 'https://i.imgur.com/kofu-avatar.png'
+                iconURL: 'https://cdn.discordapp.com/embed/avatars/0.png'
             })
             .setTimestamp();
     }

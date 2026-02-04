@@ -1,10 +1,10 @@
 /**
  * ====================================
- * TASHKY BOT - ERROR HANDLER
+ * TASHKY BOT - GESTIONNAIRE D'ERREURS
  * ====================================
  * 
- * Gestionnaire global des erreurs du bot
- * Capture et log toutes les erreurs
+ * Système complet de gestion des erreurs
+ * Logging, notifications et récupération
  * 
  * @author Kofu (github.com/kofudev)
  * @version 1.0.0
@@ -13,39 +13,45 @@
  * ====================================
  */
 
-const { Events } = require('discord.js');
-
 /**
- * Initialiser la gestion d'erreurs globale
+ * Initialiser le gestionnaire d'erreurs global
  * @param {Client} client - Le client Discord
  * @author Kofu
  */
 function initializeErrorHandler(client) {
     console.log('🛡️ [Kofu] Initialisation du gestionnaire d\'erreurs...');
     
-    // Erreurs du client Discord
-    client.on(Events.Error, (error) => {
-        console.error('💥 [Kofu] Erreur client Discord:', error);
+    // Erreurs Discord.js
+    client.on('error', error => {
+        console.error('❌ [Kofu] Erreur client Discord:', error);
         client.logger.logCriticalError('Discord Client Error', error);
     });
     
-    // Warnings du client Discord
-    client.on(Events.Warn, (warning) => {
-        console.warn('⚠️ [Kofu] Warning client Discord:', warning);
-        client.logger.warn('Discord Client Warning', { warning });
+    client.on('warn', warning => {
+        console.warn('⚠️ [Kofu] Avertissement Discord:', warning);
+        client.logger.warn('Discord Warning', warning);
     });
     
-    // Debug du client Discord (seulement en développement)
-    if (process.env.NODE_ENV === 'development' && process.env.DEBUG_MODE === 'true') {
-        client.on(Events.Debug, (info) => {
-            console.log('🐛 [Kofu] Debug Discord:', info);
-        });
-    }
+    client.on('debug', info => {
+        if (process.env.DEBUG_MODE === 'true') {
+            console.log('🔍 [Kofu] Debug Discord:', info);
+        }
+    });
     
-    // Erreurs de rate limit
-    client.rest.on('rateLimited', (rateLimitData) => {
-        console.warn('🚦 [Kofu] Rate limit atteint:', rateLimitData);
-        client.logger.warn('Rate Limit Hit', rateLimitData);
+    // Erreurs de connexion
+    client.on('shardError', error => {
+        console.error('❌ [Kofu] Erreur shard:', error);
+        client.logger.logCriticalError('Shard Error', error);
+    });
+    
+    client.on('shardDisconnect', (event, id) => {
+        console.warn(`⚠️ [Kofu] Shard ${id} déconnecté:`, event);
+        client.logger.warn('Shard Disconnect', { event, shardId: id });
+    });
+    
+    client.on('shardReconnecting', id => {
+        console.log(`🔄 [Kofu] Shard ${id} en reconnexion...`);
+        client.logger.info('Shard Reconnecting', { shardId: id });
     });
     
     console.log('✅ [Kofu] Gestionnaire d\'erreurs initialisé !');
@@ -54,7 +60,7 @@ function initializeErrorHandler(client) {
 /**
  * Gérer une erreur de commande
  * @param {Error} error - L'erreur
- * @param {Interaction} interaction - L'interaction qui a causé l'erreur
+ * @param {Interaction} interaction - L'interaction Discord
  * @param {Client} client - Le client Discord
  * @author Kofu
  */
@@ -76,31 +82,37 @@ async function handleCommandError(error, interaction, client) {
             } : null,
             channel: {
                 id: interaction.channel.id,
-                name: interaction.channel.name
+                type: interaction.channel.type
             }
         }
     );
     
-    // Créer un embed d'erreur
+    // Créer un rapport d'erreur
+    const errorReport = createErrorReport(error, interaction);
+    
+    // Envoyer le rapport via webhook si configuré
+    await sendErrorWebhook(errorReport, client);
+    
+    // Créer un embed d'erreur pour l'utilisateur
     const errorEmbed = {
         color: 0xF04747,
-        title: '❌ Erreur !',
-        description: 'Une erreur est survenue lors de l\'exécution de cette commande.',
+        title: '❌ Une erreur est survenue !',
+        description: 'Une erreur inattendue s\'est produite lors de l\'exécution de cette commande.',
         fields: [
             {
-                name: '🐛 Détails de l\'erreur',
-                value: `\`\`\`${error.message}\`\`\``,
+                name: '🔧 Que faire ?',
+                value: '• Réessayez dans quelques instants\n• Vérifiez que la commande est correcte\n• Contactez le support si le problème persiste',
                 inline: false
             },
             {
-                name: '🔧 Que faire ?',
-                value: '• Réessayez dans quelques secondes\n• Si le problème persiste, contactez le support\n• Vérifiez que vous utilisez la commande correctement',
+                name: '📊 Informations techniques',
+                value: `**Commande:** \`${interaction.commandName}\`\n**Erreur:** \`${error.name}\`\n**ID:** \`${errorReport.id}\``,
                 inline: false
             }
         ],
         footer: {
             text: '✨ Made with ❤️ by Kofu | TASHKY Bot',
-            icon_url: 'https://i.imgur.com/kofu-avatar.png'
+            icon_url: 'https://cdn.discordapp.com/embed/avatars/0.png'
         },
         timestamp: new Date().toISOString()
     };
@@ -185,7 +197,7 @@ async function handlePermissionError(permission, interaction, client) {
         ],
         footer: {
             text: '✨ Made with ❤️ by Kofu | TASHKY Bot',
-            icon_url: 'https://i.imgur.com/kofu-avatar.png'
+            icon_url: 'https://cdn.discordapp.com/embed/avatars/0.png'
         },
         timestamp: new Date().toISOString()
     };
@@ -211,7 +223,7 @@ async function handleCooldownError(timeLeft, interaction) {
         description: `Attends encore **${timeLeft.toFixed(1)}** secondes avant de réutiliser cette commande.`,
         footer: {
             text: '✨ Made with ❤️ by Kofu | TASHKY Bot',
-            icon_url: 'https://i.imgur.com/kofu-avatar.png'
+            icon_url: 'https://cdn.discordapp.com/embed/avatars/0.png'
         },
         timestamp: new Date().toISOString()
     };
@@ -219,30 +231,50 @@ async function handleCooldownError(timeLeft, interaction) {
     try {
         await interaction.reply({ embeds: [cooldownEmbed], ephemeral: true });
     } catch (replyError) {
-        console.error('❌ [Kofu] Impossible de répondre au cooldown:', replyError);
+        console.error('❌ [Kofu] Impossible de répondre à l\'erreur de cooldown:', replyError);
     }
 }
 
 /**
  * Créer un rapport d'erreur détaillé
  * @param {Error} error - L'erreur
- * @param {object} context - Contexte de l'erreur
+ * @param {Interaction} interaction - L'interaction Discord
  * @returns {object} Rapport d'erreur
  * @author Kofu
  */
-function createErrorReport(error, context = {}) {
+function createErrorReport(error, interaction) {
     return {
-        timestamp: new Date().toISOString(),
+        id: `error_${Date.now()}_${Math.random().toString(36).substr(2, 9)}`,
+        timestamp: new Date(),
         error: {
             name: error.name,
             message: error.message,
             stack: error.stack
         },
-        context,
-        botInfo: {
-            version: process.env.BOT_VERSION || '1.0.0',
+        command: {
+            name: interaction.commandName,
+            type: interaction.type,
+            options: interaction.options ? interaction.options.data : null
+        },
+        user: {
+            id: interaction.user.id,
+            tag: interaction.user.tag,
+            bot: interaction.user.bot
+        },
+        guild: interaction.guild ? {
+            id: interaction.guild.id,
+            name: interaction.guild.name,
+            memberCount: interaction.guild.memberCount
+        } : null,
+        channel: {
+            id: interaction.channel.id,
+            type: interaction.channel.type,
+            name: interaction.channel.name || 'DM'
+        },
+        environment: {
             nodeVersion: process.version,
-            platform: process.platform
+            platform: process.platform,
+            memory: process.memoryUsage()
         }
     };
 }

@@ -281,7 +281,7 @@
         "quickStartText": "• `/help` - See all commands\n• `/language` - Change language\n• `/ticket-setup` - Configure tickets\n• `/config` - Configure bot",
         "statistics": "📊 Statistics",
         "usefulLinks": "🔗 Useful Links",
-        "usefulLinksText": "[📖 Documentation](https://github.com/kofudev/tashky-bot)\n[💬 Support](https://discord.gg/support)\n[⭐ GitHub](https://github.com/kofudev)",
+        "usefulLinksText": "[📖 Documentation](https://github.com/kofudev/tashky-bot)\n[💬 Support](https://discord.gg/your-support)\n[⭐ GitHub](https://github.com/kofudev)",
         "buttons": {
           "guide": "📚 Getting Started Guide",
           "config": "⚙️ Configuration",

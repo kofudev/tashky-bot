@@ -121,8 +121,8 @@ class WebPanelServer {
             // En production, ici on redirigerait vers Discord OAuth
             // Pour la démo, on simule une connexion
             req.session.user = {
-                id: '863848649439838248', // ID de Kofu pour la démo
-                username: 'Kofu',
+                id: 'DEMO_USER_ID', // ID de démo
+                username: 'DemoUser',
                 discriminator: '0001',
                 avatar: null
             };
