@@ -162,7 +162,8 @@ client.once('ready', async () => {
     // Démarrer le panel web si activé
     if (process.env.ENABLE_OWNER_PANEL === 'true') {
         try {
-            const webPanel = require('./web-panel/server');
+            const WebPanelServer = require('./web-panel/server');
+            const webPanel = new WebPanelServer();
             webPanel.start(client);
             console.log(`🌐 [Kofu] Panel web démarré sur le port ${process.env.DASHBOARD_PORT}`);
         } catch (error) {
