@@ -1,0 +1,308 @@
+<!DOCTYPE html>
+<html lang="fr">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>Dashboard - TASHKY Bot Panel</title>
+    <link href="https://cdn.jsdelivr.net/npm/bootstrap@5.3.0/dist/css/bootstrap.min.css" rel="stylesheet">
+    <link href="https://cdnjs.cloudflare.com/ajax/libs/font-awesome/6.4.0/css/all.min.css" rel="stylesheet">
+    <link href="/css/style.css" rel="stylesheet">
+</head>
+<body class="bg-dark text-light">
+    <!-- Navigation -->
+    <nav class="navbar navbar-expand-lg navbar-dark bg-primary">
+        <div class="container-fluid">
+            <a class="navbar-brand" href="/">
+                <i class="fas fa-robot me-2"></i>
+                TASHKY Bot Panel
+            </a>
+            
+            <div class="navbar-nav ms-auto">
+                <div class="nav-item dropdown">
+                    <a class="nav-link dropdown-toggle" href="#" role="button" data-bs-toggle="dropdown">
+                        <i class="fas fa-user me-2"></i>
+                        <% if (typeof user !== 'undefined' && user) { %>
+                            <%= user.username %>
+                        <% } else { %>
+                            Utilisateur
+                        <% } %>
+                    </a>
+                    <ul class="dropdown-menu dropdown-menu-dark">
+                        <li><a class="dropdown-item" href="/logout"><i class="fas fa-sign-out-alt me-2"></i>Déconnexion</a></li>
+                    </ul>
+                </div>
+            </div>
+        </div>
+    </nav>
+
+    <div class="container-fluid">
+        <div class="row">
+            <!-- Sidebar -->
+            <nav class="col-md-3 col-lg-2 d-md-block bg-secondary sidebar collapse">
+                <div class="position-sticky pt-3">
+                    <ul class="nav flex-column">
+                        <li class="nav-item">
+                            <a class="nav-link active text-light" href="/dashboard">
+                                <i class="fas fa-tachometer-alt me-2"></i>
+                                Dashboard
+                            </a>
+                        </li>
+                        <li class="nav-item">
+                            <a class="nav-link text-light" href="/servers">
+                                <i class="fas fa-server me-2"></i>
+                                Serveurs
+                            </a>
+                        </li>
+                        <li class="nav-item">
+                            <a class="nav-link text-light" href="/commands">
+                                <i class="fas fa-terminal me-2"></i>
+                                Commandes
+                            </a>
+                        </li>
+                        <li class="nav-item">
+                            <a class="nav-link text-light" href="/logs">
+                                <i class="fas fa-file-alt me-2"></i>
+                                Logs
+                            </a>
+                        </li>
+                        <li class="nav-item">
+                            <a class="nav-link text-light" href="/settings">
+                                <i class="fas fa-cog me-2"></i>
+                                Paramètres
+                            </a>
+                        </li>
+                    </ul>
+                </div>
+            </nav>
+
+            <!-- Main content -->
+            <main class="col-md-9 ms-sm-auto col-lg-10 px-md-4">
+                <div class="d-flex justify-content-between flex-wrap flex-md-nowrap align-items-center pt-3 pb-2 mb-3 border-bottom">
+                    <h1 class="h2">
+                        <i class="fas fa-tachometer-alt me-2"></i>
+                        Dashboard
+                    </h1>
+                </div>
+
+                <!-- Stats Cards -->
+                <div class="row mb-4">
+                    <div class="col-xl-3 col-md-6 mb-4">
+                        <div class="card bg-primary text-white">
+                            <div class="card-body">
+                                <div class="row no-gutters align-items-center">
+                                    <div class="col mr-2">
+                                        <div class="text-xs font-weight-bold text-uppercase mb-1">Serveurs</div>
+                                        <div class="h5 mb-0 font-weight-bold">
+                                            <% if (typeof stats !== 'undefined' && stats.guilds) { %>
+                                                <%= stats.guilds %>
+                                            <% } else { %>
+                                                0
+                                            <% } %>
+                                        </div>
+                                    </div>
+                                    <div class="col-auto">
+                                        <i class="fas fa-server fa-2x"></i>
+                                    </div>
+                                </div>
+                            </div>
+                        </div>
+                    </div>
+
+                    <div class="col-xl-3 col-md-6 mb-4">
+                        <div class="card bg-success text-white">
+                            <div class="card-body">
+                                <div class="row no-gutters align-items-center">
+                                    <div class="col mr-2">
+                                        <div class="text-xs font-weight-bold text-uppercase mb-1">Utilisateurs</div>
+                                        <div class="h5 mb-0 font-weight-bold">
+                                            <% if (typeof stats !== 'undefined' && stats.users) { %>
+                                                <%= stats.users %>
+                                            <% } else { %>
+                                                0
+                                            <% } %>
+                                        </div>
+                                    </div>
+                                    <div class="col-auto">
+                                        <i class="fas fa-users fa-2x"></i>
+                                    </div>
+                                </div>
+                            </div>
+                        </div>
+                    </div>
+
+                    <div class="col-xl-3 col-md-6 mb-4">
+                        <div class="card bg-info text-white">
+                            <div class="card-body">
+                                <div class="row no-gutters align-items-center">
+                                    <div class="col mr-2">
+                                        <div class="text-xs font-weight-bold text-uppercase mb-1">Commandes</div>
+                                        <div class="h5 mb-0 font-weight-bold">
+                                            <% if (typeof stats !== 'undefined' && stats.commands) { %>
+                                                <%= stats.commands %>
+                                            <% } else { %>
+                                                0
+                                            <% } %>
+                                        </div>
+                                    </div>
+                                    <div class="col-auto">
+                                        <i class="fas fa-terminal fa-2x"></i>
+                                    </div>
+                                </div>
+                            </div>
+                        </div>
+                    </div>
+
+                    <div class="col-xl-3 col-md-6 mb-4">
+                        <div class="card bg-warning text-white">
+                            <div class="card-body">
+                                <div class="row no-gutters align-items-center">
+                                    <div class="col mr-2">
+                                        <div class="text-xs font-weight-bold text-uppercase mb-1">Uptime</div>
+                                        <div class="h5 mb-0 font-weight-bold">
+                                            <% if (typeof stats !== 'undefined' && stats.uptime) { %>
+                                                <%= stats.uptime %>
+                                            <% } else { %>
+                                                0s
+                                            <% } %>
+                                        </div>
+                                    </div>
+                                    <div class="col-auto">
+                                        <i class="fas fa-clock fa-2x"></i>
+                                    </div>
+                                </div>
+                            </div>
+                        </div>
+                    </div>
+                </div>
+
+                <!-- Quick Actions -->
+                <div class="row mb-4">
+                    <div class="col-12">
+                        <div class="card bg-secondary">
+                            <div class="card-header">
+                                <h5 class="card-title mb-0">
+                                    <i class="fas fa-bolt me-2"></i>
+                                    Actions Rapides
+                                </h5>
+                            </div>
+                            <div class="card-body">
+                                <div class="row">
+                                    <div class="col-md-3 mb-2">
+                                        <button class="btn btn-outline-primary w-100" onclick="restartBot()">
+                                            <i class="fas fa-redo me-2"></i>
+                                            Redémarrer Bot
+                                        </button>
+                                    </div>
+                                    <div class="col-md-3 mb-2">
+                                        <button class="btn btn-outline-success w-100" onclick="reloadCommands()">
+                                            <i class="fas fa-sync me-2"></i>
+                                            Recharger Commandes
+                                        </button>
+                                    </div>
+                                    <div class="col-md-3 mb-2">
+                                        <button class="btn btn-outline-info w-100" onclick="viewLogs()">
+                                            <i class="fas fa-file-alt me-2"></i>
+                                            Voir Logs
+                                        </button>
+                                    </div>
+                                    <div class="col-md-3 mb-2">
+                                        <button class="btn btn-outline-warning w-100" onclick="backupData()">
+                                            <i class="fas fa-download me-2"></i>
+                                            Backup
+                                        </button>
+                                    </div>
+                                </div>
+                            </div>
+                        </div>
+                    </div>
+                </div>
+
+                <!-- Recent Activity -->
+                <div class="row">
+                    <div class="col-12">
+                        <div class="card bg-secondary">
+                            <div class="card-header">
+                                <h5 class="card-title mb-0">
+                                    <i class="fas fa-history me-2"></i>
+                                    Activité Récente
+                                </h5>
+                            </div>
+                            <div class="card-body">
+                                <div class="table-responsive">
+                                    <table class="table table-dark table-striped">
+                                        <thead>
+                                            <tr>
+                                                <th>Heure</th>
+                                                <th>Action</th>
+                                                <th>Utilisateur</th>
+                                                <th>Serveur</th>
+                                            </tr>
+                                        </thead>
+                                        <tbody>
+                                            <tr>
+                                                <td>Il y a 2 min</td>
+                                                <td><span class="badge bg-success">Connexion</span></td>
+                                                <td>DemoUser#0001</td>
+                                                <td>Panel Web</td>
+                                            </tr>
+                                            <tr>
+                                                <td>Il y a 5 min</td>
+                                                <td><span class="badge bg-info">Commande</span></td>
+                                                <td>Utilisateur#1234</td>
+                                                <td>Mon Serveur</td>
+                                            </tr>
+                                            <tr>
+                                                <td>Il y a 10 min</td>
+                                                <td><span class="badge bg-primary">Démarrage</span></td>
+                                                <td>Système</td>
+                                                <td>Bot</td>
+                                            </tr>
+                                        </tbody>
+                                    </table>
+                                </div>
+                            </div>
+                        </div>
+                    </div>
+                </div>
+            </main>
+        </div>
+    </div>
+
+    <script src="https://cdn.jsdelivr.net/npm/bootstrap@5.3.0/dist/js/bootstrap.bundle.min.js"></script>
+    <script src="/js/main.js"></script>
+    
+    <script>
+        function restartBot() {
+            if (confirm('Êtes-vous sûr de vouloir redémarrer le bot ?')) {
+                fetch('/api/restart', { method: 'POST' })
+                    .then(response => response.json())
+                    .then(data => {
+                        alert(data.message || 'Bot redémarré !');
+                    })
+                    .catch(error => {
+                        alert('Erreur lors du redémarrage');
+                    });
+            }
+        }
+        
+        function reloadCommands() {
+            fetch('/api/reload', { method: 'POST' })
+                .then(response => response.json())
+                .then(data => {
+                    alert(data.message || 'Commandes rechargées !');
+                })
+                .catch(error => {
+                    alert('Erreur lors du rechargement');
+                });
+        }
+        
+        function viewLogs() {
+            window.location.href = '/logs';
+        }
+        
+        function backupData() {
+            window.location.href = '/api/backup';
+        }
+    </script>
+</body>
+</html>

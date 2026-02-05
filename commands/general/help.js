@@ -57,7 +57,7 @@ async function showSpecificCommand(interaction, commandName) {
     if (!command) {
         const errorEmbed = KofuSignature.createErrorEmbed(
             'Commande introuvable !',
-            `La commande \`/${commandName}\` n'existe pas.\\n\\nUtilise \`/help\` pour voir toutes les commandes disponibles.`
+            `La commande \`/${commandName}\` n'existe pas.\n\nUtilise \`/help\` pour voir toutes les commandes disponibles.`
         );
         
         return interaction.reply({ embeds: [errorEmbed], ephemeral: true });
@@ -87,8 +87,8 @@ async function showSpecificCommand(interaction, commandName) {
     if (command.data.options && command.data.options.length > 0) {
         const optionsText = command.data.options.map(option => {
             const required = option.required ? '**[Requis]**' : '*[Optionnel]*';
-            return `• **${option.name}** ${required}\\n  ${option.description}`;
-        }).join('\\n\\n');
+            return `• **${option.name}** ${required}\n  ${option.description}`;
+        }).join('\n\n');
         
         commandEmbed.addFields({
             name: '⚙️ Options',
@@ -108,12 +108,12 @@ async function showSpecificCommand(interaction, commandName) {
 async function showGeneralHelp(interaction) {
     // Créer l'embed principal
     const mainEmbed = new EmbedBuilder()
-        .setTitle('📚 TASHKY Bot - Guide d\\'utilisation')
+        .setTitle('📚 TASHKY Bot - Guide d\'utilisation')
         .setDescription(
-            '**Bienvenue dans l\\'aide de TASHKY Bot !** 🎉\\n\\n' +
-            '🤖 **Bot multifonction** créé avec passion par **Kofu**\\n' +
-            '✨ **Code humain**, lisible et bien commenté\\n' +
-            '🛡️ **Modération avancée**, tickets, logs et bien plus !\\n\\n' +
+            '**Bienvenue dans l\'aide de TASHKY Bot !** 🎉\n\n' +
+            '🤖 **Bot multifonction** créé avec passion par **Kofu**\n' +
+            '✨ **Code humain**, lisible et bien commenté\n' +
+            '🛡️ **Modération avancée**, tickets, logs et bien plus !\n\n' +
             '**Utilise le menu ci-dessous pour explorer les catégories** 👇'
         )
         .setColor('#5865F2')
@@ -122,18 +122,18 @@ async function showGeneralHelp(interaction) {
             {
                 name: '📊 Statistiques',
                 value: 
-                    `🏛️ **Serveurs:** \`${interaction.client.guilds.cache.size}\`\\n` +
-                    `👥 **Utilisateurs:** \`${interaction.client.users.cache.size}\`\\n` +
-                    `⚙️ **Commandes:** \`${interaction.client.commands.size}\`\\n` +
+                    `🏛️ **Serveurs:** \`${interaction.client.guilds.cache.size}\`\n` +
+                    `👥 **Utilisateurs:** \`${interaction.client.users.cache.size}\`\n` +
+                    `⚙️ **Commandes:** \`${interaction.client.commands.size}\`\n` +
                     `🏓 **Ping:** \`${interaction.client.ws.ping}ms\``,
                 inline: true
             },
             {
                 name: '🔗 Liens utiles',
                 value: 
-                    '[📥 Inviter le bot](https://discord.com/oauth2/authorize)\\n' +
-                    '[💬 Serveur de support](https://discord.gg/support)\\n' +
-                    '[📖 GitHub](https://github.com/kofudev/tashky-bot)\\n' +
+                    '[📥 Inviter le bot](https://discord.com/oauth2/authorize)\n' +
+                    '[💬 Serveur de support](https://discord.gg/support)\n' +
+                    '[📖 GitHub](https://github.com/kofudev/tashky-bot)\n' +
                     '[💖 Faire un don](https://paypal.me/kofu)',
                 inline: true
             }
@@ -278,7 +278,7 @@ async function createCategoryEmbed(category, client) {
     } else {
         const commandList = commands.map(cmd => 
             `**/${cmd.data.name}** - ${cmd.data.description}`
-        ).join('\\n');
+        ).join('\n');
         
         embed.addFields({
             name: `⚙️ Commandes (${commands.size})`,

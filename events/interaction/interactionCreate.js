@@ -89,8 +89,8 @@ async function handleSlashCommand(interaction, client) {
             if (missingPermissions.length > 0) {
                 const errorEmbed = KofuSignature.createErrorEmbed(
                     'Permissions insuffisantes !',
-                    `Tu n'as pas les permissions nécessaires pour utiliser cette commande.\\n\\n` +
-                    `**Permissions manquantes:**\\n${missingPermissions.map(p => `• ${p}`).join('\\n')}`
+                    `Tu n'as pas les permissions nécessaires pour utiliser cette commande.\n\n` +
+                    `**Permissions manquantes:**\n${missingPermissions.map(p => `• ${p}`).join('\n')}`
                 );
                 return interaction.reply({ embeds: [errorEmbed], ephemeral: true });
             }
@@ -104,8 +104,8 @@ async function handleSlashCommand(interaction, client) {
             if (missingBotPermissions.length > 0) {
                 const errorEmbed = KofuSignature.createErrorEmbed(
                     'Permissions du bot insuffisantes !',
-                    `Je n'ai pas les permissions nécessaires pour exécuter cette commande.\\n\\n` +
-                    `**Permissions manquantes:**\\n${missingBotPermissions.map(p => `• ${p}`).join('\\n')}`
+                    `Je n'ai pas les permissions nécessaires pour exécuter cette commande.\n\n` +
+                    `**Permissions manquantes:**\n${missingBotPermissions.map(p => `• ${p}`).join('\n')}`
                 );
                 return interaction.reply({ embeds: [errorEmbed], ephemeral: true });
             }
@@ -159,7 +159,7 @@ async function handleSlashCommand(interaction, client) {
         // Répondre avec une erreur
         const embed = KofuSignature.createErrorEmbed(
             'Erreur !',
-            `Une erreur est survenue lors de l'exécution de cette commande.\\n\\n\`\`\`${error.message}\`\`\``
+            `Une erreur est survenue lors de l'exécution de cette commande.\n\n\`\`\`${error.message}\`\`\``
         );
         
         const method = interaction.replied || interaction.deferred ? 'followUp' : 'reply';
@@ -200,7 +200,7 @@ async function handleButton(interaction, client) {
         // Bouton non reconnu
         const errorEmbed = KofuSignature.createWarningEmbed(
             'Bouton non reconnu',
-            'Ce bouton n\\'est plus actif ou n\\'est pas reconnu par le système.'
+            'Ce bouton n\'est plus actif ou n\'est pas reconnu par le système.'
         );
         
         await interaction.reply({ embeds: [errorEmbed], ephemeral: true });
@@ -251,7 +251,7 @@ async function handleSelectMenu(interaction, client) {
         // Menu non reconnu
         const errorEmbed = KofuSignature.createWarningEmbed(
             'Menu non reconnu',
-            'Ce menu n\\'est plus actif ou n\\'est pas reconnu par le système.'
+            'Ce menu n\'est plus actif ou n\'est pas reconnu par le système.'
         );
         
         await interaction.reply({ embeds: [errorEmbed], ephemeral: true });
@@ -289,7 +289,7 @@ async function handleModal(interaction, client) {
         // Modal non reconnu
         const errorEmbed = KofuSignature.createWarningEmbed(
             'Modal non reconnu',
-            'Ce formulaire n\\'est plus actif ou n\\'est pas reconnu par le système.'
+            'Ce formulaire n\'est plus actif ou n\'est pas reconnu par le système.'
         );
         
         await interaction.reply({ embeds: [errorEmbed], ephemeral: true });
