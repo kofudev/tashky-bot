@@ -1,0 +1,409 @@
+<!DOCTYPE html>
+<html lang="fr">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>📄 Logs Système - Owner Panel</title>
+    <link href="https://cdn.jsdelivr.net/npm/bootstrap@5.3.0/dist/css/bootstrap.min.css" rel="stylesheet">
+    <link href="https://cdnjs.cloudflare.com/ajax/libs/font-awesome/6.4.0/css/all.min.css" rel="stylesheet">
+    <link href="https://fonts.googleapis.com/css2?family=Inter:wght@300;400;500;600;700&display=swap" rel="stylesheet">
+    <link href="/static/css/style.css" rel="stylesheet">
+    <style>
+        body {
+            font-family: 'Inter', sans-serif;
+            background: linear-gradient(135deg, #2c3e50 0%, #34495e 100%);
+            min-height: 100vh;
+        }
+        
+        .log-container {
+            background: rgba(0, 0, 0, 0.8);
+            border-radius: 15px;
+            padding: 1.5rem;
+            font-family: 'Courier New', monospace;
+            font-size: 0.85rem;
+            line-height: 1.4;
+            max-height: 600px;
+            overflow-y: auto;
+            border: 1px solid rgba(255, 255, 255, 0.1);
+        }
+        
+        .log-line {
+            margin-bottom: 0.25rem;
+            padding: 0.25rem 0.5rem;
+            border-radius: 4px;
+            transition: background-color 0.2s;
+        }
+        
+        .log-line:hover {
+            background: rgba(255, 255, 255, 0.05);
+        }
+        
+        .log-error {
+            color: #ff6b6b;
+            background: rgba(255, 107, 107, 0.1);
+        }
+        
+        .log-warn {
+            color: #feca57;
+            background: rgba(254, 202, 87, 0.1);
+        }
+        
+        .log-info {
+            color: #48cae4;
+            background: rgba(72, 202, 228, 0.1);
+        }
+        
+        .log-debug {
+            color: #a8dadc;
+        }
+        
+        .filter-buttons {
+            display: flex;
+            gap: 0.5rem;
+            margin-bottom: 1rem;
+            flex-wrap: wrap;
+        }
+        
+        .filter-btn {
+            padding: 0.5rem 1rem;
+            border: none;
+            border-radius: 25px;
+            background: rgba(255, 255, 255, 0.1);
+            color: white;
+            cursor: pointer;
+            transition: all 0.3s ease;
+        }
+        
+        .filter-btn.active {
+            background: linear-gradient(135deg, #667eea, #764ba2);
+            transform: scale(1.05);
+        }
+        
+        .filter-btn:hover {
+            background: rgba(255, 255, 255, 0.2);
+        }
+        
+        .stats-card {
+            background: linear-gradient(135deg, rgba(255, 255, 255, 0.1), rgba(255, 255, 255, 0.05));
+            backdrop-filter: blur(10px);
+            border: 1px solid rgba(255, 255, 255, 0.2);
+            border-radius: 15px;
+            padding: 1.5rem;
+            text-align: center;
+        }
+        
+        .auto-refresh {
+            position: fixed;
+            top: 20px;
+            right: 20px;
+            z-index: 1000;
+        }
+    </style>
+</head>
+<body class="text-light">
+    <!-- Auto-refresh toggle -->
+    <div class="auto-refresh">
+        <button class="btn btn-outline-light btn-sm" onclick="toggleAutoRefresh()">
+            <i class="fas fa-sync-alt" id="refresh-icon"></i>
+            <span id="refresh-text">Auto-refresh: OFF</span>
+        </button>
+    </div>
+
+    <!-- Navigation -->
+    <nav class="navbar navbar-expand-lg navbar-dark" style="background: rgba(0, 0, 0, 0.3); backdrop-filter: blur(10px);">
+        <div class="container-fluid">
+            <a class="navbar-brand d-flex align-items-center" href="/owner">
+                <div class="me-3">
+                    <i class="fas fa-file-alt fa-2x text-info"></i>
+                </div>
+                <div>
+                    <h4 class="mb-0 text-info">LOGS SYSTÈME</h4>
+                    <small class="text-muted">Surveillance en temps réel</small>
+                </div>
+            </a>
+            
+            <div class="navbar-nav ms-auto">
+                <a class="nav-link" href="/owner">
+                    <i class="fas fa-arrow-left me-2"></i>
+                    Retour au Panel
+                </a>
+            </div>
+        </div>
+    </nav>
+
+    <div class="container-fluid py-4">
+        <!-- Stats Row -->
+        <div class="row mb-4">
+            <div class="col-md-3 mb-3">
+                <div class="stats-card">
+                    <i class="fas fa-exclamation-triangle fa-2x text-danger mb-2"></i>
+                    <h4 class="text-white" id="error-count">0</h4>
+                    <p class="text-muted mb-0">Erreurs</p>
+                </div>
+            </div>
+            <div class="col-md-3 mb-3">
+                <div class="stats-card">
+                    <i class="fas fa-exclamation-circle fa-2x text-warning mb-2"></i>
+                    <h4 class="text-white" id="warn-count">0</h4>
+                    <p class="text-muted mb-0">Avertissements</p>
+                </div>
+            </div>
+            <div class="col-md-3 mb-3">
+                <div class="stats-card">
+                    <i class="fas fa-info-circle fa-2x text-info mb-2"></i>
+                    <h4 class="text-white" id="info-count">0</h4>
+                    <p class="text-muted mb-0">Informations</p>
+                </div>
+            </div>
+            <div class="col-md-3 mb-3">
+                <div class="stats-card">
+                    <i class="fas fa-clock fa-2x text-success mb-2"></i>
+                    <h4 class="text-white" id="last-update">--:--</h4>
+                    <p class="text-muted mb-0">Dernière MAJ</p>
+                </div>
+            </div>
+        </div>
+
+        <!-- Filters -->
+        <div class="row mb-4">
+            <div class="col-12">
+                <div class="stats-card">
+                    <h5 class="text-white mb-3">
+                        <i class="fas fa-filter me-2"></i>
+                        Filtres de Logs
+                    </h5>
+                    <div class="filter-buttons">
+                        <button class="filter-btn active" data-type="all">
+                            <i class="fas fa-list me-1"></i>
+                            Tous les logs
+                        </button>
+                        <button class="filter-btn" data-type="error">
+                            <i class="fas fa-exclamation-triangle me-1"></i>
+                            Erreurs
+                        </button>
+                        <button class="filter-btn" data-type="command">
+                            <i class="fas fa-terminal me-1"></i>
+                            Commandes
+                        </button>
+                        <button class="filter-btn" data-type="owner">
+                            <i class="fas fa-crown me-1"></i>
+                            Actions Owner
+                        </button>
+                        <button class="filter-btn" data-type="moderation">
+                            <i class="fas fa-shield-alt me-1"></i>
+                            Modération
+                        </button>
+                    </div>
+                </div>
+            </div>
+        </div>
+
+        <!-- Logs Display -->
+        <div class="row">
+            <div class="col-12">
+                <div class="stats-card">
+                    <div class="d-flex justify-content-between align-items-center mb-3">
+                        <h5 class="text-white mb-0">
+                            <i class="fas fa-terminal me-2"></i>
+                            Logs en Temps Réel
+                        </h5>
+                        <div>
+                            <button class="btn btn-outline-light btn-sm me-2" onclick="clearLogs()">
+                                <i class="fas fa-trash me-1"></i>
+                                Vider
+                            </button>
+                            <button class="btn btn-outline-success btn-sm" onclick="refreshLogs()">
+                                <i class="fas fa-sync-alt me-1"></i>
+                                Actualiser
+                            </button>
+                        </div>
+                    </div>
+                    
+                    <div class="log-container" id="log-container">
+                        <div class="text-center text-muted">
+                            <i class="fas fa-spinner fa-spin fa-2x mb-3"></i>
+                            <p>Chargement des logs...</p>
+                        </div>
+                    </div>
+                </div>
+            </div>
+        </div>
+    </div>
+
+    <script src="https://cdn.jsdelivr.net/npm/bootstrap@5.3.0/dist/js/bootstrap.bundle.min.js"></script>
+    <script>
+        let currentFilter = 'all';
+        let autoRefreshInterval = null;
+        let isAutoRefresh = false;
+        
+        // Initialisation
+        document.addEventListener('DOMContentLoaded', function() {
+            setupFilterButtons();
+            refreshLogs();
+        });
+        
+        // Configuration des boutons de filtre
+        function setupFilterButtons() {
+            const filterButtons = document.querySelectorAll('.filter-btn');
+            filterButtons.forEach(btn => {
+                btn.addEventListener('click', function() {
+                    // Retirer la classe active de tous les boutons
+                    filterButtons.forEach(b => b.classList.remove('active'));
+                    // Ajouter la classe active au bouton cliqué
+                    this.classList.add('active');
+                    
+                    currentFilter = this.dataset.type;
+                    refreshLogs();
+                });
+            });
+        }
+        
+        // Actualiser les logs
+        function refreshLogs() {
+            const logContainer = document.getElementById('log-container');
+            
+            fetch(`/api/owner/logs?type=${currentFilter}&limit=200`)
+                .then(response => response.json())
+                .then(data => {
+                    if (data.logs && data.logs.length > 0) {
+                        displayLogs(data.logs);
+                        updateStats(data.logs);
+                    } else {
+                        logContainer.innerHTML = `
+                            <div class="text-center text-muted">
+                                <i class="fas fa-inbox fa-2x mb-3"></i>
+                                <p>Aucun log trouvé pour le filtre "${currentFilter}"</p>
+                            </div>
+                        `;
+                    }
+                    
+                    // Mettre à jour l'heure de dernière mise à jour
+                    document.getElementById('last-update').textContent = new Date().toLocaleTimeString('fr-FR');
+                })
+                .catch(error => {
+                    console.error('Erreur lors du chargement des logs:', error);
+                    logContainer.innerHTML = `
+                        <div class="text-center text-danger">
+                            <i class="fas fa-exclamation-triangle fa-2x mb-3"></i>
+                            <p>Erreur lors du chargement des logs</p>
+                        </div>
+                    `;
+                });
+        }
+        
+        // Afficher les logs
+        function displayLogs(logs) {
+            const logContainer = document.getElementById('log-container');
+            
+            const logHtml = logs.map(log => {
+                const logClass = getLogClass(log);
+                const timestamp = extractTimestamp(log);
+                const message = extractMessage(log);
+                
+                return `
+                    <div class="log-line ${logClass}">
+                        <span class="text-muted">[${timestamp}]</span>
+                        ${message}
+                    </div>
+                `;
+            }).join('');
+            
+            logContainer.innerHTML = logHtml;
+            
+            // Scroll vers le bas pour voir les logs les plus récents
+            logContainer.scrollTop = logContainer.scrollHeight;
+        }
+        
+        // Déterminer la classe CSS du log
+        function getLogClass(log) {
+            if (log.includes('ERROR') || log.includes('❌')) return 'log-error';
+            if (log.includes('WARN') || log.includes('⚠️')) return 'log-warn';
+            if (log.includes('INFO') || log.includes('✅')) return 'log-info';
+            return 'log-debug';
+        }
+        
+        // Extraire le timestamp du log
+        function extractTimestamp(log) {
+            const match = log.match(/(\d{4}-\d{2}-\d{2} \d{2}:\d{2}:\d{2})/);
+            return match ? match[1] : 'N/A';
+        }
+        
+        // Extraire le message du log
+        function extractMessage(log) {
+            // Supprimer le timestamp et le niveau de log
+            return log.replace(/^\d{4}-\d{2}-\d{2} \d{2}:\d{2}:\d{2} \w+ ✨ \[Kofu\] /, '');
+        }
+        
+        // Mettre à jour les statistiques
+        function updateStats(logs) {
+            const errorCount = logs.filter(log => getLogClass(log) === 'log-error').length;
+            const warnCount = logs.filter(log => getLogClass(log) === 'log-warn').length;
+            const infoCount = logs.filter(log => getLogClass(log) === 'log-info').length;
+            
+            document.getElementById('error-count').textContent = errorCount;
+            document.getElementById('warn-count').textContent = warnCount;
+            document.getElementById('info-count').textContent = infoCount;
+        }
+        
+        // Vider les logs affichés
+        function clearLogs() {
+            if (confirm('Êtes-vous sûr de vouloir vider l\'affichage des logs ?')) {
+                document.getElementById('log-container').innerHTML = `
+                    <div class="text-center text-muted">
+                        <i class="fas fa-broom fa-2x mb-3"></i>
+                        <p>Affichage vidé</p>
+                    </div>
+                `;
+                
+                // Réinitialiser les stats
+                document.getElementById('error-count').textContent = '0';
+                document.getElementById('warn-count').textContent = '0';
+                document.getElementById('info-count').textContent = '0';
+            }
+        }
+        
+        // Toggle auto-refresh
+        function toggleAutoRefresh() {
+            const refreshIcon = document.getElementById('refresh-icon');
+            const refreshText = document.getElementById('refresh-text');
+            
+            if (isAutoRefresh) {
+                // Désactiver auto-refresh
+                clearInterval(autoRefreshInterval);
+                isAutoRefresh = false;
+                refreshIcon.classList.remove('fa-spin');
+                refreshText.textContent = 'Auto-refresh: OFF';
+            } else {
+                // Activer auto-refresh
+                autoRefreshInterval = setInterval(refreshLogs, 5000); // Toutes les 5 secondes
+                isAutoRefresh = true;
+                refreshIcon.classList.add('fa-spin');
+                refreshText.textContent = 'Auto-refresh: ON';
+            }
+        }
+        
+        // Raccourcis clavier
+        document.addEventListener('keydown', function(e) {
+            if (e.ctrlKey || e.metaKey) {
+                switch (e.key) {
+                    case 'r':
+                        e.preventDefault();
+                        refreshLogs();
+                        break;
+                    case 'l':
+                        e.preventDefault();
+                        clearLogs();
+                        break;
+                }
+            }
+        });
+        
+        // Nettoyage lors de la fermeture de la page
+        window.addEventListener('beforeunload', function() {
+            if (autoRefreshInterval) {
+                clearInterval(autoRefreshInterval);
+            }
+        });
+    </script>
+</body>
+</html>

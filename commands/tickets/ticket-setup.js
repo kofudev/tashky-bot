@@ -3,360 +3,478 @@
  * COMMANDE: /ticket-setup
  * ====================================
  * 
- * Configuration complète du système de tickets
- * Panel interactif avec boutons et menus
+ * Setup AVANCÉ du système de tickets
+ * Comme Ticket Tool - Système professionnel complet
  * 
  * @author Kofu (github.com/kofudev)
  * @category Tickets
  * ====================================
  */
 
-const { SlashCommandBuilder, EmbedBuilder, ActionRowBuilder, ButtonBuilder, ButtonStyle, ChannelType, PermissionFlagsBits } = require('discord.js');
-const KofuSignature = require('../../utils/kofu-signature');
+const { SlashCommandBuilder, ActionRowBuilder, ButtonBuilder, ButtonStyle, ChannelType, PermissionFlagsBits, StringSelectMenuBuilder } = require('discord.js');
+const EmbedFactory = require('../../utils/embed');
+const colors = require('../../config/colors');
 
 module.exports = {
     data: new SlashCommandBuilder()
         .setName('ticket-setup')
-        .setDescription('🎫 Configurer le système de tickets')
-        .addChannelOption(option =>
-            option.setName('category')
-                .setDescription('Catégorie où créer les tickets')
-                .setRequired(true)
-                .addChannelTypes(ChannelType.GuildCategory)
+        .setDescription('🎫 Configuration avancée du système de tickets professionnel')
+        .addSubcommand(subcommand =>
+            subcommand
+                .setName('panel')
+                .setDescription('Créer un panel de tickets avec sélecteur')
+                .addChannelOption(option =>
+                    option.setName('salon')
+                        .setDescription('Salon où envoyer le panel')
+                        .setRequired(true)
+                        .addChannelTypes(ChannelType.GuildText)
+                )
+                .addStringOption(option =>
+                    option.setName('titre')
+                        .setDescription('Titre du panel (optionnel)')
+                        .setRequired(false)
+                        .setMaxLength(100)
+                )
+                .addStringOption(option =>
+                    option.setName('description')
+                        .setDescription('Description du panel (optionnel)')
+                        .setRequired(false)
+                        .setMaxLength(500)
+                )
         )
-        .addChannelOption(option =>
-            option.setName('logs')
-                .setDescription('Salon pour les logs de tickets')
-                .setRequired(false)
-                .addChannelTypes(ChannelType.GuildText)
+        .addSubcommand(subcommand =>
+            subcommand
+                .setName('config')
+                .setDescription('Configurer les paramètres du système')
+                .addChannelOption(option =>
+                    option.setName('categorie')
+                        .setDescription('Catégorie pour les tickets')
+                        .setRequired(false)
+                        .addChannelTypes(ChannelType.GuildCategory)
+                )
+                .addChannelOption(option =>
+                    option.setName('logs')
+                        .setDescription('Salon pour les logs de tickets')
+                        .setRequired(false)
+                        .addChannelTypes(ChannelType.GuildText)
+                )
+                .addRoleOption(option =>
+                    option.setName('staff')
+                        .setDescription('Rôle staff pour les tickets')
+                        .setRequired(false)
+                )
+                .addIntegerOption(option =>
+                    option.setName('max-tickets')
+                        .setDescription('Nombre max de tickets par utilisateur (1-5)')
+                        .setRequired(false)
+                        .setMinValue(1)
+                        .setMaxValue(5)
+                )
         )
-        .addRoleOption(option =>
-            option.setName('staff_role')
-                .setDescription('Rôle du staff pour les tickets')
-                .setRequired(false)
+        .addSubcommand(subcommand =>
+            subcommand
+                .setName('categories')
+                .setDescription('Gérer les catégories de tickets')
+                .addStringOption(option =>
+                    option.setName('action')
+                        .setDescription('Action à effectuer')
+                        .setRequired(true)
+                        .addChoices(
+                            { name: '➕ Ajouter une catégorie', value: 'add' },
+                            { name: '❌ Supprimer une catégorie', value: 'remove' },
+                            { name: '📋 Lister les catégories', value: 'list' }
+                        )
+                )
+                .addStringOption(option =>
+                    option.setName('nom')
+                        .setDescription('Nom de la catégorie')
+                        .setRequired(false)
+                        .setMaxLength(50)
+                )
+                .addStringOption(option =>
+                    option.setName('emoji')
+                        .setDescription('Emoji de la catégorie')
+                        .setRequired(false)
+                        .setMaxLength(10)
+                )
+                .addStringOption(option =>
+                    option.setName('description')
+                        .setDescription('Description de la catégorie')
+                        .setRequired(false)
+                        .setMaxLength(100)
+                )
         )
-        .setDefaultMemberPermissions(PermissionFlagsBits.ManageChannels),
+        .setDefaultMemberPermissions(PermissionFlagsBits.Administrator),
     
     category: 'tickets',
-    cooldown: 10,
+    cooldown: 5,
     guildOnly: true,
-    permissions: ['ManageChannels'],
-    botPermissions: ['ManageChannels', 'ManageRoles'],
+    permissions: ['Administrator'],
     
     /**
-     * Exécution de la commande ticket-setup
+     * Configuration avancée du système de tickets
      * @param {ChatInputCommandInteraction} interaction - L'interaction Discord
      * @author Kofu
      */
     async execute(interaction) {
-        const category = interaction.options.getChannel('category');
-        const logsChannel = interaction.options.getChannel('logs');
-        const staffRole = interaction.options.getRole('staff_role');
+        const subcommand = interaction.options.getSubcommand();
         
-        try {
-            // Vérifier les permissions sur la catégorie
-            const botMember = interaction.guild.members.me;
-            const categoryPermissions = category.permissionsFor(botMember);
-            
-            if (!categoryPermissions.has(['ManageChannels', 'ViewChannel'])) {
-                const errorEmbed = KofuSignature.createErrorEmbed(
-                    'Permissions insuffisantes !',
-                    `Je n'ai pas les permissions nécessaires sur la catégorie **${category.name}**.\n\n` +
-                    `**Permissions requises:**\n` +
-                    `• Gérer les salons\n` +
-                    `• Voir les salons`
-                );
-                
-                return interaction.reply({ embeds: [errorEmbed], ephemeral: true });
-            }
-            
-            // Créer l'embed de configuration
-            const setupEmbed = new EmbedBuilder()
-                .setTitle('🎫 Configuration du Système de Tickets')
-                .setDescription('⏳ Configuration en cours...')
-                .setColor('#FAA61A')
-                .setFooter(KofuSignature.getKofuFooter())
-                .setTimestamp();
-            
-            await interaction.reply({ embeds: [setupEmbed] });
-            
-            // Sauvegarder la configuration dans la base de données
-            const guildData = interaction.client.database.getGuild(interaction.guild.id);
-            
-            guildData.tickets = {
-                enabled: true,
-                category: category.id,
-                transcriptsChannel: logsChannel?.id || null,
-                staffRoles: staffRole ? [staffRole.id] : [],
-                maxTicketsPerUser: 1,
-                autoClose: false,
-                autoCloseTime: 24 * 60 * 60 * 1000, // 24 heures
-                welcomeMessage: 'Merci d\'avoir créé un ticket ! Un membre du staff va te répondre bientôt. 🎫',
-                categories: [
-                    {
-                        id: 'support',
-                        name: '🛠️ Support Technique',
-                        description: 'Problèmes techniques et bugs',
-                        emoji: '🛠️'
-                    },
-                    {
-                        id: 'report',
-                        name: '🚨 Signalement',
-                        description: 'Signaler un utilisateur ou un problème',
-                        emoji: '🚨'
-                    },
-                    {
-                        id: 'other',
-                        name: '❓ Autre',
-                        description: 'Autres demandes',
-                        emoji: '❓'
-                    }
-                ]
-            };
-            
-            const success = interaction.client.database.setGuild(interaction.guild.id, guildData);
-            
-            if (!success) {
-                throw new Error('Impossible de sauvegarder la configuration');
-            }
-            
-            // Créer l'embed de succès
-            const successEmbed = KofuSignature.createSuccessEmbed(
-                'Système de tickets configuré !',
-                'Le système de tickets a été configuré avec succès sur ce serveur.'
-            );
-            
-            successEmbed.addFields(
-                { name: '📁 Catégorie', value: `${category} (\`${category.id}\`)`, inline: true },
-                { name: '📝 Logs', value: logsChannel ? `${logsChannel} (\`${logsChannel.id}\`)` : 'Non configuré', inline: true },
-                { name: '👥 Rôle Staff', value: staffRole ? `${staffRole} (\`${staffRole.id}\`)` : 'Non configuré', inline: true },
-                { name: '⚙️ Configuration', value: 
-                    `• **Tickets max par user:** 1\n` +
-                    `• **Auto-fermeture:** Désactivée\n` +
-                    `• **Catégories:** 3 (Support, Report, Autre)`, 
-                    inline: false 
-                }
-            );
-            
-            // Créer les boutons d'action
-            const actionButtons = new ActionRowBuilder()
-                .addComponents(
-                    new ButtonBuilder()
-                        .setCustomId('ticket_create_panel')
-                        .setLabel('🎫 Créer le Panel')
-                        .setStyle(ButtonStyle.Primary),
-                    new ButtonBuilder()
-                        .setCustomId('ticket_test_system')
-                        .setLabel('🧪 Tester le Système')
-                        .setStyle(ButtonStyle.Secondary),
-                    new ButtonBuilder()
-                        .setCustomId('ticket_advanced_config')
-                        .setLabel('⚙️ Config Avancée')
-                        .setStyle(ButtonStyle.Secondary)
-                );
-            
-            await interaction.editReply({
-                embeds: [successEmbed],
-                components: [actionButtons]
-            });
-            
-            // Gérer les interactions des boutons
-            handleSetupInteractions(interaction, guildData);
-            
-            // Logger la configuration
-            interaction.client.logger.info(
-                `Système de tickets configuré sur ${interaction.guild.name} par ${interaction.user.tag}`
-            );
-            
-            console.log(`🎫 [Kofu] Système de tickets configuré sur ${interaction.guild.name}`);
-            
-        } catch (error) {
-            console.error('❌ [Kofu] Erreur configuration tickets:', error);
-            
-            const errorEmbed = KofuSignature.createErrorEmbed(
-                'Erreur de configuration !',
-                `Impossible de configurer le système de tickets.\n\n**Erreur:** \`${error.message}\``
-            );
-            
-            await interaction.editReply({ embeds: [errorEmbed], components: [] });
+        switch (subcommand) {
+            case 'panel':
+                await handleCreatePanel(interaction);
+                break;
+            case 'config':
+                await handleConfig(interaction);
+                break;
+            case 'categories':
+                await handleCategories(interaction);
+                break;
         }
     }
 };
 
 /**
- * Gérer les interactions de configuration
+ * Créer un panel de tickets avancé
  * @param {ChatInputCommandInteraction} interaction - L'interaction Discord
- * @param {object} guildData - Données du serveur
  * @author Kofu
  */
-function handleSetupInteractions(interaction, guildData) {
-    const collector = interaction.channel.createMessageComponentCollector({
-        filter: i => i.user.id === interaction.user.id,
-        time: 300000 // 5 minutes
-    });
+async function handleCreatePanel(interaction) {
+    const salon = interaction.options.getChannel('salon');
+    const titre = interaction.options.getString('titre') || '🎫 SYSTÈME DE SUPPORT';
+    const description = interaction.options.getString('description') || 
+        '**Besoin d\'aide ? Créez un ticket !**\n\n' +
+        '🔹 Sélectionnez le type de votre demande\n' +
+        '🔹 Un salon privé sera créé instantanément\n' +
+        '🔹 Notre équipe vous répondra rapidement\n\n' +
+        '**Choisissez une catégorie ci-dessous :**';
     
-    collector.on('collect', async i => {
-        try {
-            switch (i.customId) {
-                case 'ticket_create_panel':
-                    await createTicketPanel(i, guildData);
-                    break;
-                case 'ticket_test_system':
-                    await testTicketSystem(i, guildData);
-                    break;
-                case 'ticket_advanced_config':
-                    await showAdvancedConfig(i, guildData);
-                    break;
-            }
-        } catch (error) {
-            console.error('❌ [Kofu] Erreur interaction setup tickets:', error);
-            
-            const errorEmbed = KofuSignature.createErrorEmbed(
-                'Erreur !',
-                `Une erreur est survenue: \`${error.message}\``
-            );
-            
-            await i.reply({ embeds: [errorEmbed], ephemeral: true });
+    await interaction.deferReply({ ephemeral: true });
+    
+    try {
+        const guildData = interaction.client.database.getGuild(interaction.guild.id);
+        
+        // Initialiser les données de tickets si nécessaire
+        if (!guildData.tickets) {
+            guildData.tickets = {
+                enabled: true,
+                categories: [
+                    { id: 'support', name: 'Support Technique', emoji: '🛠️', description: 'Problèmes techniques et bugs' },
+                    { id: 'question', name: 'Question Générale', emoji: '❓', description: 'Questions diverses' },
+                    { id: 'report', name: 'Signalement', emoji: '🚨', description: 'Signaler un problème' },
+                    { id: 'suggestion', name: 'Suggestion', emoji: '💡', description: 'Proposer une amélioration' },
+                    { id: 'other', name: 'Autre', emoji: '📝', description: 'Autre demande' }
+                ],
+                maxTickets: 3,
+                staffRoles: [],
+                logsChannel: null,
+                category: null
+            };
         }
-    });
-    
-    collector.on('end', () => {
-        console.log(`⏱️ [Kofu] Fin de la configuration tickets pour ${interaction.user.tag}`);
-    });
-}
-
-/**
- * Créer le panel de tickets
- * @param {ButtonInteraction} interaction - L'interaction de bouton
- * @param {object} guildData - Données du serveur
- * @author Kofu
- */
-async function createTicketPanel(interaction, guildData) {
-    // Créer l'embed du panel
-    const panelEmbed = new EmbedBuilder()
-        .setTitle('🎫 Système de Tickets - TASHKY Bot')
-        .setDescription(
-            '**Besoin d\'aide ? Crée un ticket !** 🆘\n\n' +
-            '🛠️ **Support Technique** - Problèmes techniques et bugs\n' +
-            '🚨 **Signalement** - Signaler un utilisateur ou un problème\n' +
-            '❓ **Autre** - Autres demandes\n\n' +
-            '**Clique sur un bouton ci-dessous pour créer ton ticket** 👇\n\n' +
-            '*Un seul ticket par utilisateur à la fois*'
-        )
-        .setColor('#5865F2')
-        .setThumbnail(interaction.guild.iconURL({ dynamic: true }))
-        .setFooter(KofuSignature.getKofuFooter())
-        .setTimestamp();
-    
-    // Créer les boutons du panel
-    const panelButtons = new ActionRowBuilder()
-        .addComponents(
-            new ButtonBuilder()
-                .setCustomId('ticket_create_support')
-                .setLabel('Support Technique')
-                .setStyle(ButtonStyle.Primary)
-                .setEmoji('🛠️'),
-            new ButtonBuilder()
-                .setCustomId('ticket_create_report')
-                .setLabel('Signalement')
-                .setStyle(ButtonStyle.Danger)
-                .setEmoji('🚨'),
-            new ButtonBuilder()
-                .setCustomId('ticket_create_other')
-                .setLabel('Autre')
-                .setStyle(ButtonStyle.Secondary)
-                .setEmoji('❓')
+        
+        // Créer l'embed du panel
+        const panelEmbed = EmbedFactory.base()
+            .setTitle(titre)
+            .setDescription(description)
+            .setColor('#8B5CF6') // Violet
+            .setThumbnail(interaction.guild.iconURL({ dynamic: true }))
+            .addFields(
+                {
+                    name: '📊 Statistiques',
+                    value: `🎫 **Tickets actifs:** 0\n📈 **Total créés:** 0\n⏱️ **Temps de réponse moyen:** < 1h`,
+                    inline: true
+                },
+                {
+                    name: '🔧 Support',
+                    value: `👥 **Équipe disponible 24/7**\n🚀 **Réponse rapide garantie**\n🔒 **Confidentialité assurée**`,
+                    inline: true
+                }
+            )
+            .setFooter({ text: '✨ Made with ❤️ by Kofu • Système de tickets professionnel' })
+            .setTimestamp();
+        
+        // Créer le menu de sélection
+        const selectMenu = new StringSelectMenuBuilder()
+            .setCustomId('ticket_category_select')
+            .setPlaceholder('🎫 Sélectionnez le type de votre ticket...')
+            .setMinValues(1)
+            .setMaxValues(1);
+        
+        // Ajouter les options du menu
+        guildData.tickets.categories.forEach(category => {
+            selectMenu.addOptions({
+                label: category.name,
+                description: category.description,
+                value: category.id,
+                emoji: category.emoji
+            });
+        });
+        
+        const row = new ActionRowBuilder().addComponents(selectMenu);
+        
+        // Envoyer le panel
+        await salon.send({
+            embeds: [panelEmbed],
+            components: [row]
+        });
+        
+        // Sauvegarder la configuration
+        guildData.tickets.panelChannel = salon.id;
+        interaction.client.database.setGuild(interaction.guild.id, guildData);
+        
+        // Réponse de succès
+        const successEmbed = EmbedFactory.success(
+            '🎫 Panel de tickets créé !',
+            `**Panel professionnel déployé avec succès !** 🚀\n\n` +
+            `✅ **Salon:** ${salon}\n` +
+            `✅ **Catégories:** ${guildData.tickets.categories.length}\n` +
+            `✅ **Menu de sélection:** Activé\n\n` +
+            `**Le système est maintenant opérationnel !**`
         );
-    
-    // Envoyer le panel dans le salon actuel
-    const panelMessage = await interaction.channel.send({
-        embeds: [panelEmbed],
-        components: [panelButtons]
-    });
-    
-    // Confirmer la création
-    const confirmEmbed = KofuSignature.createSuccessEmbed(
-        'Panel créé !',
-        `Le panel de tickets a été créé avec succès dans ce salon.\n\n` +
-        `**Message ID:** \`${panelMessage.id}\`\n` +
-        `**Salon:** ${interaction.channel}`
-    );
-    
-    await interaction.update({
-        embeds: [confirmEmbed],
-        components: []
-    });
-    
-    console.log(`🎫 [Kofu] Panel de tickets créé dans ${interaction.channel.name}`);
+        
+        await interaction.editReply({ embeds: [successEmbed] });
+        
+        console.log(`🎫 [Kofu] Panel de tickets avancé créé sur ${interaction.guild.name} par ${interaction.user.tag}`);
+        
+    } catch (error) {
+        console.error('❌ [Kofu] Erreur création panel tickets:', error);
+        
+        await interaction.editReply({
+            embeds: [EmbedFactory.error(
+                'Erreur de création',
+                `Impossible de créer le panel.\n\n**Erreur:** \`${error.message}\``
+            )]
+        });
+    }
 }
 
 /**
- * Tester le système de tickets
- * @param {ButtonInteraction} interaction - L'interaction de bouton
- * @param {object} guildData - Données du serveur
+ * Configurer les paramètres du système
+ * @param {ChatInputCommandInteraction} interaction - L'interaction Discord
  * @author Kofu
  */
-async function testTicketSystem(interaction, guildData) {
-    const testEmbed = new EmbedBuilder()
-        .setTitle('🧪 Test du Système de Tickets')
-        .setDescription(
-            '**Test des composants du système...**\n\n' +
-            '✅ Configuration sauvegardée\n' +
-            '✅ Catégorie accessible\n' +
-            '✅ Permissions du bot vérifiées\n' +
-            '✅ Base de données fonctionnelle\n\n' +
-            '**Le système de tickets est prêt à être utilisé !** 🎉'
-        )
-        .setColor('#43B581')
-        .addFields(
-            { name: '📁 Catégorie', value: `<#${guildData.tickets.category}>`, inline: true },
-            { name: '📝 Logs', value: guildData.tickets.transcriptsChannel ? `<#${guildData.tickets.transcriptsChannel}>` : 'Non configuré', inline: true },
-            { name: '👥 Staff', value: guildData.tickets.staffRoles.length > 0 ? `<@&${guildData.tickets.staffRoles[0]}>` : 'Non configuré', inline: true }
-        )
-        .setFooter(KofuSignature.getKofuFooter())
-        .setTimestamp();
+async function handleConfig(interaction) {
+    const categorie = interaction.options.getChannel('categorie');
+    const logs = interaction.options.getChannel('logs');
+    const staff = interaction.options.getRole('staff');
+    const maxTickets = interaction.options.getInteger('max-tickets');
     
-    await interaction.update({
-        embeds: [testEmbed],
-        components: []
-    });
-}
-
-/**
- * Afficher la configuration avancée
- * @param {ButtonInteraction} interaction - L'interaction de bouton
- * @param {object} guildData - Données du serveur
- * @author Kofu
- */
-async function showAdvancedConfig(interaction, guildData) {
-    const configEmbed = new EmbedBuilder()
-        .setTitle('⚙️ Configuration Avancée des Tickets')
-        .setDescription(
-            '**Paramètres avancés du système de tickets**\n\n' +
-            '🔧 Utilise les commandes suivantes pour personnaliser:\n\n' +
-            '• `/ticket-config max-tickets <nombre>` - Tickets max par user\n' +
-            '• `/ticket-config auto-close <true/false>` - Auto-fermeture\n' +
-            '• `/ticket-config welcome-message <message>` - Message d\'accueil\n' +
-            '• `/ticket-config add-staff-role <role>` - Ajouter un rôle staff\n' +
-            '• `/ticket-config remove-staff-role <role>` - Retirer un rôle staff'
-        )
-        .setColor('#9B59B6')
-        .addFields(
-            { name: '📊 Configuration Actuelle', value: 
-                `• **Max tickets/user:** ${guildData.tickets.maxTicketsPerUser}\n` +
-                `• **Auto-fermeture:** ${guildData.tickets.autoClose ? 'Activée' : 'Désactivée'}\n` +
-                `• **Rôles staff:** ${guildData.tickets.staffRoles.length}`, 
-                inline: false 
+    await interaction.deferReply({ ephemeral: true });
+    
+    try {
+        const guildData = interaction.client.database.getGuild(interaction.guild.id);
+        
+        if (!guildData.tickets) {
+            guildData.tickets = { enabled: true };
+        }
+        
+        let changes = [];
+        
+        // Configurer la catégorie
+        if (categorie) {
+            guildData.tickets.category = categorie.id;
+            changes.push(`✅ **Catégorie:** ${categorie}`);
+        }
+        
+        // Configurer les logs
+        if (logs) {
+            guildData.tickets.logsChannel = logs.id;
+            changes.push(`✅ **Logs:** ${logs}`);
+        }
+        
+        // Configurer le rôle staff
+        if (staff) {
+            if (!guildData.tickets.staffRoles) guildData.tickets.staffRoles = [];
+            if (!guildData.tickets.staffRoles.includes(staff.id)) {
+                guildData.tickets.staffRoles.push(staff.id);
+                changes.push(`✅ **Rôle staff ajouté:** ${staff}`);
+            } else {
+                changes.push(`⚠️ **Rôle staff déjà configuré:** ${staff}`);
             }
-        )
-        .setFooter(KofuSignature.getKofuFooter())
-        .setTimestamp();
-    
-    await interaction.update({
-        embeds: [configEmbed],
-        components: []
-    });
+        }
+        
+        // Configurer le max de tickets
+        if (maxTickets) {
+            guildData.tickets.maxTickets = maxTickets;
+            changes.push(`✅ **Max tickets par utilisateur:** ${maxTickets}`);
+        }
+        
+        // Sauvegarder
+        interaction.client.database.setGuild(interaction.guild.id, guildData);
+        
+        if (changes.length === 0) {
+            return interaction.editReply({
+                embeds: [EmbedFactory.warning(
+                    'Aucun changement',
+                    'Aucun paramètre n\'a été modifié. Spécifiez au moins une option.'
+                )]
+            });
+        }
+        
+        const configEmbed = EmbedFactory.success(
+            '⚙️ Configuration mise à jour',
+            `**Paramètres modifiés avec succès !**\n\n${changes.join('\n')}\n\n` +
+            `**Configuration actuelle :**\n` +
+            `🎫 **Catégorie:** ${guildData.tickets.category ? `<#${guildData.tickets.category}>` : 'Non configurée'}\n` +
+            `📝 **Logs:** ${guildData.tickets.logsChannel ? `<#${guildData.tickets.logsChannel}>` : 'Non configurés'}\n` +
+            `👥 **Rôles staff:** ${guildData.tickets.staffRoles?.length || 0}\n` +
+            `🔢 **Max tickets:** ${guildData.tickets.maxTickets || 3}`
+        );
+        
+        await interaction.editReply({ embeds: [configEmbed] });
+        
+    } catch (error) {
+        console.error('❌ [Kofu] Erreur configuration tickets:', error);
+        
+        await interaction.editReply({
+            embeds: [EmbedFactory.error(
+                'Erreur de configuration',
+                `Impossible de modifier la configuration.\n\n**Erreur:** \`${error.message}\``
+            )]
+        });
+    }
 }
+
+/**
+ * Gérer les catégories de tickets
+ * @param {ChatInputCommandInteraction} interaction - L'interaction Discord
+ * @author Kofu
+ */
+async function handleCategories(interaction) {
+    const action = interaction.options.getString('action');
+    const nom = interaction.options.getString('nom');
+    const emoji = interaction.options.getString('emoji');
+    const description = interaction.options.getString('description');
+    
+    await interaction.deferReply({ ephemeral: true });
+    
+    try {
+        const guildData = interaction.client.database.getGuild(interaction.guild.id);
+        
+        if (!guildData.tickets) {
+            guildData.tickets = { enabled: true, categories: [] };
+        }
+        
+        if (!guildData.tickets.categories) {
+            guildData.tickets.categories = [];
+        }
+        
+        switch (action) {
+            case 'add':
+                if (!nom || !emoji || !description) {
+                    return interaction.editReply({
+                        embeds: [EmbedFactory.error(
+                            'Paramètres manquants',
+                            'Pour ajouter une catégorie, vous devez spécifier : **nom**, **emoji** et **description**.'
+                        )]
+                    });
+                }
+                
+                const categoryId = nom.toLowerCase().replace(/\s+/g, '-');
+                
+                // Vérifier si la catégorie existe déjà
+                if (guildData.tickets.categories.find(cat => cat.id === categoryId)) {
+                    return interaction.editReply({
+                        embeds: [EmbedFactory.error(
+                            'Catégorie existante',
+                            `Une catégorie avec le nom "${nom}" existe déjà.`
+                        )]
+                    });
+                }
+                
+                guildData.tickets.categories.push({
+                    id: categoryId,
+                    name: nom,
+                    emoji: emoji,
+                    description: description
+                });
+                
+                interaction.client.database.setGuild(interaction.guild.id, guildData);
+                
+                await interaction.editReply({
+                    embeds: [EmbedFactory.success(
+                        '➕ Catégorie ajoutée',
+                        `**${emoji} ${nom}** a été ajoutée avec succès !\n\n` +
+                        `**Description:** ${description}\n` +
+                        `**ID:** \`${categoryId}\``
+                    )]
+                });
+                break;
+                
+            case 'remove':
+                if (!nom) {
+                    return interaction.editReply({
+                        embeds: [EmbedFactory.error(
+                            'Nom manquant',
+                            'Spécifiez le nom de la catégorie à supprimer.'
+                        )]
+                    });
+                }
+                
+                const removeId = nom.toLowerCase().replace(/\s+/g, '-');
+                const categoryIndex = guildData.tickets.categories.findIndex(cat => cat.id === removeId);
+                
+                if (categoryIndex === -1) {
+                    return interaction.editReply({
+                        embeds: [EmbedFactory.error(
+                            'Catégorie introuvable',
+                            `Aucune catégorie trouvée avec le nom "${nom}".`
+                        )]
+                    });
+                }
+                
+                const removedCategory = guildData.tickets.categories.splice(categoryIndex, 1)[0];
+                interaction.client.database.setGuild(interaction.guild.id, guildData);
+                
+                await interaction.editReply({
+                    embeds: [EmbedFactory.success(
+                        '❌ Catégorie supprimée',
+                        `**${removedCategory.emoji} ${removedCategory.name}** a été supprimée avec succès !`
+                    )]
+                });
+                break;
+                
+            case 'list':
+                if (guildData.tickets.categories.length === 0) {
+                    return interaction.editReply({
+                        embeds: [EmbedFactory.info(
+                            '📋 Aucune catégorie',
+                            'Aucune catégorie de ticket n\'est configurée.\n\nUtilisez `/ticket-setup categories add` pour en ajouter.'
+                        )]
+                    });
+                }
+                
+                const categoriesList = guildData.tickets.categories.map((cat, index) => 
+                    `**${index + 1}.** ${cat.emoji} **${cat.name}**\n` +
+                    `   └ *${cat.description}*\n   └ ID: \`${cat.id}\``
+                ).join('\n\n');
+                
+                const listEmbed = EmbedFactory.info(
+                    '📋 Catégories de tickets',
+                    `**${guildData.tickets.categories.length} catégorie(s) configurée(s) :**\n\n${categoriesList}`
+                );
+                
+                await interaction.editReply({ embeds: [listEmbed] });
+                break;
+        }
+        
+    } catch (error) {
+        console.error('❌ [Kofu] Erreur gestion catégories:', error);
+        
+        await interaction.editReply({
+            embeds: [EmbedFactory.error(
+                'Erreur',
+                `Impossible de gérer les catégories.\n\n**Erreur:** \`${error.message}\``
+            )]
+        });
+    }
+}
+
+/**
+ * ====================================
+ * ✨ Made with ❤️ by Kofu
+ * github.com/kofudev
+ * ====================================
+ */
 
 /**
  * ====================================

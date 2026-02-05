@@ -120,7 +120,7 @@ async function handleCommandError(error, interaction, client) {
     try {
         // Répondre à l'interaction avec l'erreur
         const method = interaction.replied || interaction.deferred ? 'followUp' : 'reply';
-        await interaction[method]({ embeds: [errorEmbed], ephemeral: true });
+        await interaction[method]({ embeds: [errorEmbed], flags: 64 });
     } catch (replyError) {
         console.error('❌ [Kofu] Impossible de répondre à l\'erreur:', replyError);
     }
@@ -204,7 +204,7 @@ async function handlePermissionError(permission, interaction, client) {
     
     try {
         const method = interaction.replied || interaction.deferred ? 'followUp' : 'reply';
-        await interaction[method]({ embeds: [permissionEmbed], ephemeral: true });
+        await interaction[method]({ embeds: [permissionEmbed], flags: 64 });
     } catch (replyError) {
         console.error('❌ [Kofu] Impossible de répondre à l\'erreur de permission:', replyError);
     }
@@ -229,7 +229,7 @@ async function handleCooldownError(timeLeft, interaction) {
     };
     
     try {
-        await interaction.reply({ embeds: [cooldownEmbed], ephemeral: true });
+        await interaction.reply({ embeds: [cooldownEmbed], flags: 64 });
     } catch (replyError) {
         console.error('❌ [Kofu] Impossible de répondre à l\'erreur de cooldown:', replyError);
     }

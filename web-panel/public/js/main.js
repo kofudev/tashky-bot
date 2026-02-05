@@ -1,323 +1,718 @@
 /**
  * ====================================
- * TASHKY BOT - WEB PANEL JAVASCRIPT
- * ====================================
- * 
- * Scripts JavaScript pour le dashboard
- * Interactions et animations
- * 
- * @author Kofu (github.com/kofudev)
+ * TASHKY BOT - PANEL WEB PROFESSIONNEL
+ * JavaScript avancé avec animations
+ * Made with ❤️ by Kofu
  * ====================================
  */
 
-// Attendre que le DOM soit chargé
+// Variables globales
+let botStats = {
+    servers: 0,
+    users: 0,
+    commands: 0,
+    uptime: 0
+};
+
+let isConnected = false;
+let lastUpdate = Date.now();
+
+// Initialisation au chargement de la page
 document.addEventListener('DOMContentLoaded', function() {
-    console.log('✨ [Kofu] Dashboard JavaScript initialisé !');
-    
-    // Initialiser les fonctionnalités
+    initializeApp();
+    setupEventListeners();
+    startRealTimeUpdates();
     initializeAnimations();
-    initializeStatsUpdater();
-    initializeTooltips();
-    initializeTheme();
-    
-    // Message de bienvenue dans la console
-    console.log(`
-    ╔══════════════════════════════════════╗
-    ║            TASHKY BOT                ║
-    ║        Ultimate Edition              ║
-    ╠══════════════════════════════════════╣
-    ║                                      ║
-    ║  👨‍💻 Développeur: Kofu                ║
-    ║  🔗 GitHub: github.com/kofudev       ║
-    ║  💖 Licence: MIT                     ║
-    ║                                      ║
-    ╚══════════════════════════════════════╝
-    `);
 });
 
 /**
- * Initialiser les animations
- * @author Kofu
+ * Initialisation de l'application
+ */
+function initializeApp() {
+    console.log('🚀 [TASHKY] Initialisation du panel web...');
+    
+    // Vérifier la connexion
+    checkBotStatus();
+    
+    // Charger les statistiques
+    loadBotStats();
+    
+    // Initialiser les composants
+    initializeComponents();
+    
+    // Ajouter les effets de scroll
+    setupScrollEffects();
+    
+    console.log('✅ [TASHKY] Panel web initialisé avec succès !');
+}
+
+/**
+ * Configuration des écouteurs d'événements
+ */
+function setupEventListeners() {
+    // Boutons de navigation
+    document.querySelectorAll('.nav-link').forEach(link => {
+        link.addEventListener('click', handleNavigation);
+    });
+    
+    // Boutons d'action
+    document.querySelectorAll('.btn-primary').forEach(btn => {
+        btn.addEventListener('click', handleButtonClick);
+    });
+    
+    // Formulaires
+    document.querySelectorAll('form').forEach(form => {
+        form.addEventListener('submit', handleFormSubmit);
+    });
+    
+    // Scroll pour header
+    window.addEventListener('scroll', handleScroll);
+    
+    // Resize pour responsive
+    window.addEventListener('resize', handleResize);
+    
+    // Raccourcis clavier
+    document.addEventListener('keydown', handleKeyboard);
+}
+
+/**
+ * Démarrage des mises à jour en temps réel
+ */
+function startRealTimeUpdates() {
+    // Mise à jour des stats toutes les 5 secondes
+    setInterval(updateStats, 5000);
+    
+    // Vérification du statut toutes les 10 secondes
+    setInterval(checkBotStatus, 10000);
+    
+    // Mise à jour de l'uptime toutes les secondes
+    setInterval(updateUptime, 1000);
+    
+    // Animation des compteurs
+    setInterval(animateCounters, 2000);
+}
+
+/**
+ * Initialisation des animations
  */
 function initializeAnimations() {
-    // Animation des cartes au scroll
-    const observerOptions = {
-        threshold: 0.1,
-        rootMargin: '0px 0px -50px 0px'
-    };
-    
+    // Observer pour les animations au scroll
     const observer = new IntersectionObserver((entries) => {
         entries.forEach(entry => {
             if (entry.isIntersecting) {
-                entry.target.style.opacity = '1';
-                entry.target.style.transform = 'translateY(0)';
+                entry.target.classList.add('fade-in');
             }
         });
-    }, observerOptions);
+    }, { threshold: 0.1 });
     
-    // Observer les éléments à animer
-    document.querySelectorAll('.stat-card, .feature-card').forEach(el => {
-        el.style.opacity = '0';
-        el.style.transform = 'translateY(30px)';
-        el.style.transition = 'opacity 0.6s ease, transform 0.6s ease';
+    // Observer tous les éléments animables
+    document.querySelectorAll('.card, .stat-card, .hero-content').forEach(el => {
         observer.observe(el);
     });
     
-    console.log('🎬 [Kofu] Animations initialisées');
+    // Animations de particules
+    createParticleEffect();
 }
 
 /**
- * Initialiser le système de mise à jour des stats
- * @author Kofu
+ * Vérification du statut du bot
  */
-function initializeStatsUpdater() {
-    // Mettre à jour les stats toutes les 30 secondes
-    setInterval(updateStats, 30000);
-    
-    console.log('📊 [Kofu] Mise à jour automatique des stats activée');
-}
-
-/**
- * Mettre à jour les statistiques
- * @author Kofu
- */
-async function updateStats() {
+async function checkBotStatus() {
     try {
-        const response = await fetch('/api/stats');
-        const stats = await response.json();
+        const response = await fetch('/api/status');
+        const data = await response.json();
         
-        // Mettre à jour les éléments de stats
-        updateStatElement('guilds', stats.guilds);
-        updateStatElement('users', stats.users);
-        updateStatElement('commands', stats.commands);
-        updateStatElement('ping', `${stats.ping}ms`);
+        isConnected = data.online;
+        updateStatusIndicator(isConnected);
         
-        console.log('📊 [Kofu] Statistiques mises à jour');
+        if (isConnected) {
+            botStats = { ...botStats, ...data.stats };
+            updateStatsDisplay();
+        }
         
     } catch (error) {
-        console.error('❌ [Kofu] Erreur mise à jour stats:', error);
+        console.error('❌ [TASHKY] Erreur vérification statut:', error);
+        isConnected = false;
+        updateStatusIndicator(false);
     }
 }
 
 /**
- * Mettre à jour un élément de statistique
- * @param {string} type - Type de statistique
- * @param {string|number} value - Nouvelle valeur
- * @author Kofu
+ * Chargement des statistiques du bot
  */
-function updateStatElement(type, value) {
-    const elements = document.querySelectorAll(`[data-stat="${type}"]`);
-    elements.forEach(el => {
-        // Animation de changement
-        el.style.transform = 'scale(1.1)';
-        el.style.transition = 'transform 0.3s ease';
+async function loadBotStats() {
+    try {
+        const response = await fetch('/api/stats');
+        const data = await response.json();
+        
+        botStats = data;
+        updateStatsDisplay();
+        animateCounters();
+        
+    } catch (error) {
+        console.error('❌ [TASHKY] Erreur chargement stats:', error);
+        showNotification('Erreur de chargement des statistiques', 'error');
+    }
+}
+
+/**
+ * Mise à jour de l'affichage des statistiques
+ */
+function updateStatsDisplay() {
+    const elements = {
+        servers: document.querySelector('[data-stat="servers"]'),
+        users: document.querySelector('[data-stat="users"]'),
+        commands: document.querySelector('[data-stat="commands"]'),
+        uptime: document.querySelector('[data-stat="uptime"]')
+    };
+    
+    Object.keys(elements).forEach(key => {
+        if (elements[key]) {
+            const value = formatStatValue(botStats[key], key);
+            animateNumber(elements[key], value);
+        }
+    });
+    
+    lastUpdate = Date.now();
+}
+
+/**
+ * Formatage des valeurs statistiques
+ */
+function formatStatValue(value, type) {
+    switch (type) {
+        case 'servers':
+        case 'users':
+        case 'commands':
+            return formatNumber(value);
+        case 'uptime':
+            return formatUptime(value);
+        default:
+            return value;
+    }
+}
+
+/**
+ * Formatage des nombres avec séparateurs
+ */
+function formatNumber(num) {
+    if (num >= 1000000) {
+        return (num / 1000000).toFixed(1) + 'M';
+    } else if (num >= 1000) {
+        return (num / 1000).toFixed(1) + 'K';
+    }
+    return num.toLocaleString();
+}
+
+/**
+ * Formatage de l'uptime
+ */
+function formatUptime(seconds) {
+    const days = Math.floor(seconds / 86400);
+    const hours = Math.floor((seconds % 86400) / 3600);
+    const minutes = Math.floor((seconds % 3600) / 60);
+    
+    if (days > 0) {
+        return `${days}j ${hours}h`;
+    } else if (hours > 0) {
+        return `${hours}h ${minutes}m`;
+    } else {
+        return `${minutes}m`;
+    }
+}
+
+/**
+ * Animation des nombres
+ */
+function animateNumber(element, targetValue) {
+    if (!element) return;
+    
+    const currentValue = parseInt(element.textContent.replace(/[^\d]/g, '')) || 0;
+    const target = parseInt(targetValue.toString().replace(/[^\d]/g, '')) || 0;
+    
+    if (currentValue === target) return;
+    
+    const duration = 1000;
+    const startTime = Date.now();
+    const difference = target - currentValue;
+    
+    function updateValue() {
+        const elapsed = Date.now() - startTime;
+        const progress = Math.min(elapsed / duration, 1);
+        
+        const easeOutQuart = 1 - Math.pow(1 - progress, 4);
+        const current = Math.round(currentValue + (difference * easeOutQuart));
+        
+        element.textContent = formatNumber(current);
+        
+        if (progress < 1) {
+            requestAnimationFrame(updateValue);
+        } else {
+            element.textContent = targetValue;
+        }
+    }
+    
+    requestAnimationFrame(updateValue);
+}
+
+/**
+ * Mise à jour de l'indicateur de statut
+ */
+function updateStatusIndicator(online) {
+    const indicators = document.querySelectorAll('.status');
+    
+    indicators.forEach(indicator => {
+        indicator.className = 'status';
+        indicator.classList.add(online ? 'status-online' : 'status-offline');
+        
+        const dot = indicator.querySelector('.status-dot');
+        if (dot) {
+            dot.style.backgroundColor = online ? 'var(--success-color)' : 'var(--error-color)';
+        }
+        
+        const text = indicator.querySelector('.status-text');
+        if (text) {
+            text.textContent = online ? 'En ligne' : 'Hors ligne';
+        }
+    });
+}
+
+/**
+ * Animation des compteurs
+ */
+function animateCounters() {
+    document.querySelectorAll('.stat-number').forEach(counter => {
+        counter.style.transform = 'scale(1.05)';
+        counter.style.color = 'var(--primary-color)';
         
         setTimeout(() => {
-            el.textContent = value;
-            el.style.transform = 'scale(1)';
-        }, 150);
+            counter.style.transform = 'scale(1)';
+        }, 200);
     });
 }
 
 /**
- * Initialiser les tooltips Bootstrap
- * @author Kofu
+ * Mise à jour de l'uptime
  */
-function initializeTooltips() {
-    // Initialiser tous les tooltips
-    const tooltipTriggerList = [].slice.call(document.querySelectorAll('[data-bs-toggle="tooltip"]'));
-    tooltipTriggerList.map(function (tooltipTriggerEl) {
-        return new bootstrap.Tooltip(tooltipTriggerEl);
+function updateUptime() {
+    if (isConnected) {
+        botStats.uptime += 1;
+        const uptimeElement = document.querySelector('[data-stat="uptime"]');
+        if (uptimeElement) {
+            uptimeElement.textContent = formatUptime(botStats.uptime);
+        }
+    }
+}
+
+/**
+ * Gestion de la navigation
+ */
+function handleNavigation(event) {
+    event.preventDefault();
+    
+    const target = event.target.getAttribute('href');
+    if (!target) return;
+    
+    // Mise à jour des liens actifs
+    document.querySelectorAll('.nav-link').forEach(link => {
+        link.classList.remove('active');
     });
+    event.target.classList.add('active');
     
-    console.log('💡 [Kofu] Tooltips initialisés');
+    // Animation de transition
+    const main = document.querySelector('.main');
+    main.style.opacity = '0.5';
+    main.style.transform = 'translateY(20px)';
+    
+    setTimeout(() => {
+        // Ici on chargerait le contenu de la nouvelle page
+        main.style.opacity = '1';
+        main.style.transform = 'translateY(0)';
+    }, 300);
+    
+    showNotification(`Navigation vers ${target}`, 'success');
 }
 
 /**
- * Initialiser le système de thème
- * @author Kofu
+ * Gestion des clics de boutons
  */
-function initializeTheme() {
-    // Détecter le thème préféré de l'utilisateur
-    const prefersDark = window.matchMedia('(prefers-color-scheme: dark)').matches;
+function handleButtonClick(event) {
+    const button = event.target;
+    const action = button.getAttribute('data-action');
     
-    // Appliquer le thème (pour l'instant, toujours sombre)
-    document.body.setAttribute('data-theme', 'dark');
+    // Animation du bouton
+    button.style.transform = 'scale(0.95)';
+    setTimeout(() => {
+        button.style.transform = 'scale(1)';
+    }, 150);
     
-    console.log('🎨 [Kofu] Thème initialisé');
+    // Actions spécifiques
+    switch (action) {
+        case 'invite':
+            window.open('https://discord.com/oauth2/authorize?client_id=YOUR_BOT_ID&permissions=8&scope=bot%20applications.commands', '_blank');
+            break;
+        case 'support':
+            window.open('https://discord.gg/YOUR_SUPPORT_SERVER', '_blank');
+            break;
+        case 'refresh':
+            refreshData();
+            break;
+        default:
+            console.log('Action:', action);
+    }
 }
 
 /**
- * Afficher une notification toast
- * @param {string} message - Message à afficher
- * @param {string} type - Type de notification (success, error, warning, info)
- * @author Kofu
+ * Gestion des formulaires
  */
-function showToast(message, type = 'info') {
-    // Créer l'élément toast
-    const toast = document.createElement('div');
-    toast.className = `toast align-items-center text-white bg-${type} border-0`;
-    toast.setAttribute('role', 'alert');
-    toast.innerHTML = `
-        <div class="d-flex">
-            <div class="toast-body">
-                ${message}
-            </div>
-            <button type="button" class="btn-close btn-close-white me-2 m-auto" data-bs-dismiss="toast"></button>
+function handleFormSubmit(event) {
+    event.preventDefault();
+    
+    const form = event.target;
+    const formData = new FormData(form);
+    const data = Object.fromEntries(formData);
+    
+    // Animation de chargement
+    const submitBtn = form.querySelector('button[type="submit"]');
+    const originalText = submitBtn.textContent;
+    
+    submitBtn.innerHTML = '<div class="loading"></div> Traitement...';
+    submitBtn.disabled = true;
+    
+    // Simulation d'envoi
+    setTimeout(() => {
+        submitBtn.textContent = originalText;
+        submitBtn.disabled = false;
+        
+        showNotification('Formulaire envoyé avec succès !', 'success');
+    }, 2000);
+}
+
+/**
+ * Gestion du scroll
+ */
+function handleScroll() {
+    const header = document.querySelector('.header');
+    const scrolled = window.scrollY > 50;
+    
+    header.classList.toggle('scrolled', scrolled);
+    
+    // Parallax effect
+    const hero = document.querySelector('.hero');
+    if (hero) {
+        const scrolled = window.pageYOffset;
+        const rate = scrolled * -0.5;
+        hero.style.transform = `translateY(${rate}px)`;
+    }
+}
+
+/**
+ * Gestion du redimensionnement
+ */
+function handleResize() {
+    // Réajustement des animations
+    if (window.innerWidth < 768) {
+        document.body.classList.add('mobile');
+    } else {
+        document.body.classList.remove('mobile');
+    }
+}
+
+/**
+ * Gestion des raccourcis clavier
+ */
+function handleKeyboard(event) {
+    // Ctrl + R pour rafraîchir
+    if (event.ctrlKey && event.key === 'r') {
+        event.preventDefault();
+        refreshData();
+    }
+    
+    // Échap pour fermer les notifications
+    if (event.key === 'Escape') {
+        closeAllNotifications();
+    }
+}
+
+/**
+ * Rafraîchissement des données
+ */
+async function refreshData() {
+    showNotification('Actualisation des données...', 'info');
+    
+    try {
+        await Promise.all([
+            checkBotStatus(),
+            loadBotStats()
+        ]);
+        
+        showNotification('Données actualisées !', 'success');
+        
+        // Animation de rafraîchissement
+        document.querySelectorAll('.card').forEach((card, index) => {
+            setTimeout(() => {
+                card.style.animation = 'none';
+                card.offsetHeight; // Trigger reflow
+                card.style.animation = 'fadeIn 0.6s ease-out';
+            }, index * 100);
+        });
+        
+    } catch (error) {
+        showNotification('Erreur lors de l\'actualisation', 'error');
+    }
+}
+
+/**
+ * Affichage des notifications
+ */
+function showNotification(message, type = 'info') {
+    const notification = document.createElement('div');
+    notification.className = `notification notification-${type}`;
+    notification.innerHTML = `
+        <div class="notification-content">
+            <span class="notification-icon">${getNotificationIcon(type)}</span>
+            <span class="notification-message">${message}</span>
+            <button class="notification-close" onclick="closeNotification(this)">×</button>
         </div>
     `;
     
-    // Ajouter au container de toasts
-    let toastContainer = document.getElementById('toast-container');
-    if (!toastContainer) {
-        toastContainer = document.createElement('div');
-        toastContainer.id = 'toast-container';
-        toastContainer.className = 'toast-container position-fixed bottom-0 end-0 p-3';
-        document.body.appendChild(toastContainer);
-    }
+    document.body.appendChild(notification);
     
-    toastContainer.appendChild(toast);
+    // Animation d'entrée
+    setTimeout(() => {
+        notification.classList.add('show');
+    }, 100);
     
-    // Initialiser et afficher le toast
-    const bsToast = new bootstrap.Toast(toast);
-    bsToast.show();
+    // Suppression automatique après 5 secondes
+    setTimeout(() => {
+        closeNotification(notification.querySelector('.notification-close'));
+    }, 5000);
+}
+
+/**
+ * Icônes des notifications
+ */
+function getNotificationIcon(type) {
+    const icons = {
+        success: '✅',
+        error: '❌',
+        warning: '⚠️',
+        info: 'ℹ️'
+    };
+    return icons[type] || icons.info;
+}
+
+/**
+ * Fermeture d'une notification
+ */
+function closeNotification(button) {
+    const notification = button.closest('.notification');
+    notification.classList.remove('show');
     
-    // Supprimer l'élément après fermeture
-    toast.addEventListener('hidden.bs.toast', () => {
-        toast.remove();
+    setTimeout(() => {
+        notification.remove();
+    }, 300);
+}
+
+/**
+ * Fermeture de toutes les notifications
+ */
+function closeAllNotifications() {
+    document.querySelectorAll('.notification').forEach(notification => {
+        notification.classList.remove('show');
+        setTimeout(() => notification.remove(), 300);
     });
 }
 
 /**
- * Copier du texte dans le presse-papiers
- * @param {string} text - Texte à copier
- * @author Kofu
+ * Initialisation des composants
  */
-async function copyToClipboard(text) {
-    try {
-        await navigator.clipboard.writeText(text);
-        showToast('✅ Copié dans le presse-papiers !', 'success');
-    } catch (error) {
-        console.error('❌ [Kofu] Erreur copie presse-papiers:', error);
-        showToast('❌ Erreur lors de la copie', 'danger');
-    }
-}
-
-/**
- * Formater un nombre avec des séparateurs
- * @param {number} num - Nombre à formater
- * @returns {string} Nombre formaté
- * @author Kofu
- */
-function formatNumber(num) {
-    return new Intl.NumberFormat('fr-FR').format(num);
-}
-
-/**
- * Formater une durée en format lisible
- * @param {number} ms - Durée en millisecondes
- * @returns {string} Durée formatée
- * @author Kofu
- */
-function formatDuration(ms) {
-    const seconds = Math.floor(ms / 1000);
-    const minutes = Math.floor(seconds / 60);
-    const hours = Math.floor(minutes / 60);
-    const days = Math.floor(hours / 24);
+function initializeComponents() {
+    // Tooltips
+    initializeTooltips();
     
-    if (days > 0) {
-        return `${days}j ${hours % 24}h ${minutes % 60}m`;
-    } else if (hours > 0) {
-        return `${hours}h ${minutes % 60}m`;
-    } else if (minutes > 0) {
-        return `${minutes}m ${seconds % 60}s`;
-    } else {
-        return `${seconds}s`;
+    // Modals
+    initializeModals();
+    
+    // Dropdowns
+    initializeDropdowns();
+    
+    // Charts (si nécessaire)
+    initializeCharts();
+}
+
+/**
+ * Initialisation des tooltips
+ */
+function initializeTooltips() {
+    document.querySelectorAll('[data-tooltip]').forEach(element => {
+        element.addEventListener('mouseenter', showTooltip);
+        element.addEventListener('mouseleave', hideTooltip);
+    });
+}
+
+/**
+ * Affichage des tooltips
+ */
+function showTooltip(event) {
+    const element = event.target;
+    const text = element.getAttribute('data-tooltip');
+    
+    const tooltip = document.createElement('div');
+    tooltip.className = 'tooltip';
+    tooltip.textContent = text;
+    
+    document.body.appendChild(tooltip);
+    
+    const rect = element.getBoundingClientRect();
+    tooltip.style.left = rect.left + (rect.width / 2) - (tooltip.offsetWidth / 2) + 'px';
+    tooltip.style.top = rect.top - tooltip.offsetHeight - 10 + 'px';
+    
+    setTimeout(() => tooltip.classList.add('show'), 100);
+}
+
+/**
+ * Masquage des tooltips
+ */
+function hideTooltip() {
+    const tooltip = document.querySelector('.tooltip');
+    if (tooltip) {
+        tooltip.classList.remove('show');
+        setTimeout(() => tooltip.remove(), 200);
     }
 }
 
 /**
- * Effectuer une requête API avec gestion d'erreurs
- * @param {string} url - URL de l'API
- * @param {object} options - Options de la requête
- * @returns {Promise} Promesse de la réponse
- * @author Kofu
+ * Effet de particules
  */
-async function apiRequest(url, options = {}) {
-    try {
-        const response = await fetch(url, {
-            headers: {
-                'Content-Type': 'application/json',
-                ...options.headers
-            },
-            ...options
+function createParticleEffect() {
+    const canvas = document.createElement('canvas');
+    canvas.id = 'particles';
+    canvas.style.position = 'fixed';
+    canvas.style.top = '0';
+    canvas.style.left = '0';
+    canvas.style.width = '100%';
+    canvas.style.height = '100%';
+    canvas.style.pointerEvents = 'none';
+    canvas.style.zIndex = '-1';
+    
+    document.body.appendChild(canvas);
+    
+    const ctx = canvas.getContext('2d');
+    const particles = [];
+    
+    function resizeCanvas() {
+        canvas.width = window.innerWidth;
+        canvas.height = window.innerHeight;
+    }
+    
+    function createParticle() {
+        return {
+            x: Math.random() * canvas.width,
+            y: Math.random() * canvas.height,
+            vx: (Math.random() - 0.5) * 0.5,
+            vy: (Math.random() - 0.5) * 0.5,
+            size: Math.random() * 2 + 1,
+            opacity: Math.random() * 0.5 + 0.1
+        };
+    }
+    
+    function animateParticles() {
+        ctx.clearRect(0, 0, canvas.width, canvas.height);
+        
+        particles.forEach((particle, index) => {
+            particle.x += particle.vx;
+            particle.y += particle.vy;
+            
+            if (particle.x < 0 || particle.x > canvas.width) particle.vx *= -1;
+            if (particle.y < 0 || particle.y > canvas.height) particle.vy *= -1;
+            
+            ctx.beginPath();
+            ctx.arc(particle.x, particle.y, particle.size, 0, Math.PI * 2);
+            ctx.fillStyle = `rgba(139, 92, 246, ${particle.opacity})`;
+            ctx.fill();
         });
         
-        if (!response.ok) {
-            throw new Error(`Erreur HTTP: ${response.status}`);
-        }
-        
-        return await response.json();
-        
-    } catch (error) {
-        console.error(`❌ [Kofu] Erreur API ${url}:`, error);
-        showToast(`❌ Erreur: ${error.message}`, 'danger');
-        throw error;
+        requestAnimationFrame(animateParticles);
+    }
+    
+    resizeCanvas();
+    window.addEventListener('resize', resizeCanvas);
+    
+    // Créer les particules
+    for (let i = 0; i < 50; i++) {
+        particles.push(createParticle());
+    }
+    
+    animateParticles();
+}
+
+/**
+ * Configuration des effets de scroll
+ */
+function setupScrollEffects() {
+    const elements = document.querySelectorAll('.card, .stat-card');
+    
+    const observer = new IntersectionObserver((entries) => {
+        entries.forEach((entry, index) => {
+            if (entry.isIntersecting) {
+                setTimeout(() => {
+                    entry.target.style.opacity = '1';
+                    entry.target.style.transform = 'translateY(0)';
+                }, index * 100);
+            }
+        });
+    }, { threshold: 0.1 });
+    
+    elements.forEach(element => {
+        element.style.opacity = '0';
+        element.style.transform = 'translateY(30px)';
+        element.style.transition = 'all 0.6s ease-out';
+        observer.observe(element);
+    });
+}
+
+/**
+ * Initialisation des modals (si nécessaire)
+ */
+function initializeModals() {
+    // Code pour les modals
+}
+
+/**
+ * Initialisation des dropdowns (si nécessaire)
+ */
+function initializeDropdowns() {
+    // Code pour les dropdowns
+}
+
+/**
+ * Initialisation des graphiques (si nécessaire)
+ */
+function initializeCharts() {
+    // Code pour les graphiques
+}
+
+/**
+ * Mise à jour des statistiques en temps réel
+ */
+function updateStats() {
+    if (Date.now() - lastUpdate > 30000) { // 30 secondes sans mise à jour
+        loadBotStats();
     }
 }
 
-/**
- * Débouncer une fonction
- * @param {Function} func - Fonction à débouncer
- * @param {number} wait - Délai d'attente en ms
- * @returns {Function} Fonction débouncée
- * @author Kofu
- */
-function debounce(func, wait) {
-    let timeout;
-    return function executedFunction(...args) {
-        const later = () => {
-            clearTimeout(timeout);
-            func(...args);
-        };
-        clearTimeout(timeout);
-        timeout = setTimeout(later, wait);
-    };
-}
-
-/**
- * Valider un ID Discord
- * @param {string} id - ID à valider
- * @returns {boolean} True si valide
- * @author Kofu
- */
-function isValidDiscordId(id) {
-    return /^\d{17,19}$/.test(id);
-}
-
-/**
- * Échapper le HTML pour éviter les injections XSS
- * @param {string} text - Texte à échapper
- * @returns {string} Texte échappé
- * @author Kofu
- */
-function escapeHtml(text) {
-    const div = document.createElement('div');
-    div.textContent = text;
-    return div.innerHTML;
-}
-
-// Fonctions utilitaires globales
-window.KofuUtils = {
-    showToast,
-    copyToClipboard,
-    formatNumber,
-    formatDuration,
-    apiRequest,
-    debounce,
-    isValidDiscordId,
-    escapeHtml
+// Export des fonctions pour utilisation globale
+window.TASHKY = {
+    refreshData,
+    showNotification,
+    closeNotification,
+    closeAllNotifications,
+    updateStats,
+    checkBotStatus
 };
+
+console.log('🎉 [TASHKY] Panel web professionnel chargé avec succès !');
 
 /**
  * ====================================

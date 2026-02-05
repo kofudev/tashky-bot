@@ -22,7 +22,8 @@ module.exports = {
     
     async execute(interaction) {
         // Vérifier immédiatement si l'utilisateur est propriétaire
-        if (!config.bot.owners.includes(interaction.user.id)) {
+        const ownersData = interaction.client.database.read('owners.json') || { owners: [] };
+        if (!ownersData.owners.includes(interaction.user.id)) {
             return await interaction.reply({
                 embeds: [EmbedFactory.error('Accès refusé', 'Cette commande est réservée aux propriétaires du bot.')],
                 flags: 64 // MessageFlags.Ephemeral

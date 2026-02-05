@@ -336,10 +336,10 @@ async function updateUserStats(interaction, client) {
     }
 }
 
-// Fonctions de gestion spécialisées (simplifiées pour l'exemple)
+// Fonctions de gestion spécialisées
 async function handleTicketButton(interaction, client) {
-    // TODO: Implémenter la gestion des boutons de tickets
-    await interaction.reply({ content: '🎫 Système de tickets en cours de développement...', ephemeral: true });
+    const { handleTicketButtons } = require('./ticketButtons');
+    await handleTicketButtons(interaction);
 }
 
 async function handleOwnerButton(interaction, client) {

@@ -163,6 +163,34 @@ class WebPanelServer {
             });
         });
         
+        // Owner - Logs système
+        this.app.get('/owner/logs', this.requireOwner, (req, res) => {
+            res.render('owner-logs', {
+                title: '📄 Logs Système - Owner Panel'
+            });
+        });
+        
+        // Owner - Gestion des utilisateurs
+        this.app.get('/owner/users', this.requireOwner, (req, res) => {
+            res.render('owner-users', {
+                title: '👥 Gestion Utilisateurs - Owner Panel'
+            });
+        });
+        
+        // Owner - Gestion des serveurs
+        this.app.get('/owner/servers', this.requireOwner, (req, res) => {
+            res.render('owner-servers', {
+                title: '🏠 Gestion Serveurs - Owner Panel'
+            });
+        });
+        
+        // Owner - Gestion des tickets
+        this.app.get('/owner/tickets', this.requireOwner, (req, res) => {
+            res.render('owner-tickets', {
+                title: '🎫 Gestion Tickets - Owner Panel'
+            });
+        });
+        
         // API Routes
         this.setupAPIRoutes();
         
@@ -327,6 +355,259 @@ class WebPanelServer {
             };
             
             res.json(stats);
+        });
+        
+        // API Owner - Gestion des utilisateurs
+        this.app.get('/api/owner/users', this.requireOwner, (req, res) => {
+            const page = parseInt(req.query.page) || 1;
+            const limit = parseInt(req.query.limit) || 50;
+            const search = req.query.search || '';
+            
+            const allUsers = Array.from(this.client.users.cache.values());
+            let filteredUsers = allUsers;
+            
+            if (search) {
+                filteredUsers = allUsers.filter(user => 
+                    user.username.toLowerCase().includes(search.toLowerCase()) ||
+                    user.tag.toLowerCase().includes(search.toLowerCase()) ||
+                    user.id.includes(search)
+                );
+            }
+            
+            const startIndex = (page - 1) * limit;
+            const endIndex = startIndex + limit;
+            const paginatedUsers = filteredUsers.slice(startIndex, endIndex);
+            
+            const users = paginatedUsers.map(user => ({
+                id: user.id,
+                username: user.username,
+                discriminator: user.discriminator,
+                tag: user.tag,
+                avatar: user.displayAvatarURL({ dynamic: true }),
+                bot: user.bot,
+                createdAt: user.createdAt.toISOString(),
+                flags: user.flags?.toArray() || []
+            }));
+            
+            res.json({
+                users,
+                pagination: {
+                    page,
+                    limit,
+                    total: filteredUsers.length,
+                    pages: Math.ceil(filteredUsers.length / limit)
+                },
+                search
+            });
+        });
+        
+        // API Owner - Gestion des serveurs
+        this.app.get('/api/owner/guilds', this.requireOwner, (req, res) => {
+            const guilds = Array.from(this.client.guilds.cache.values()).map(guild => ({
+                id: guild.id,
+                name: guild.name,
+                icon: guild.iconURL({ dynamic: true }),
+                memberCount: guild.memberCount,
+                channelCount: guild.channels.cache.size,
+                roleCount: guild.roles.cache.size,
+                ownerId: guild.ownerId,
+                createdAt: guild.createdAt.toISOString(),
+                joinedAt: guild.joinedAt.toISOString(),
+                features: guild.features,
+                premiumTier: guild.premiumTier,
+                premiumSubscriptionCount: guild.premiumSubscriptionCount
+            }));
+            
+            res.json({ guilds });
+        });
+        
+        // API Owner - Logs système
+        this.app.get('/api/owner/logs', this.requireOwner, (req, res) => {
+            const type = req.query.type || 'all';
+            const limit = parseInt(req.query.limit) || 100;
+            
+            try {
+                const fs = require('fs');
+                const path = require('path');
+                
+                let logFile = './logs/combined.log';
+                
+                switch (type) {
+                    case 'error':
+                        logFile = './logs/errors/error.log';
+                        break;
+                    case 'command':
+                        logFile = './logs/commands/commands.log';
+                        break;
+                    case 'owner':
+                        logFile = './logs/owner/owner-actions.log';
+                        break;
+                    case 'moderation':
+                        logFile = './logs/moderation/moderation.log';
+                        break;
+                }
+                
+                if (fs.existsSync(logFile)) {
+                    const logs = fs.readFileSync(logFile, 'utf8')
+                        .split('\n')
+                        .filter(line => line.trim())
+                        .slice(-limit)
+                        .reverse();
+                    
+                    res.json({ logs, type, count: logs.length });
+                } else {
+                    res.json({ logs: [], type, count: 0, message: 'Fichier de log non trouvé' });
+                }
+            } catch (error) {
+                res.status(500).json({ error: error.message });
+            }
+        });
+        
+        // API Owner - Commandes système
+        this.app.post('/api/owner/system/:action', this.requireOwner, async (req, res) => {
+            const action = req.params.action;
+            
+            try {
+                // Logger l'action système
+                this.client.logger.logOwnerAction(
+                    req.session.user,
+                    `SYSTEM_${action.toUpperCase()}`,
+                    { ip: req.ip, userAgent: req.get('User-Agent') }
+                );
+                
+                switch (action) {
+                    case 'clear-cache':
+                        // Vider les caches Discord.js
+                        this.client.users.cache.clear();
+                        this.client.channels.cache.clear();
+                        // Garder les guilds et commands en cache
+                        res.json({ success: true, message: '🗄️ Cache vidé avec succès' });
+                        break;
+                        
+                    case 'reload-database':
+                        // Recharger la base de données
+                        this.client.database.reload();
+                        res.json({ success: true, message: '💾 Base de données rechargée' });
+                        break;
+                        
+                    case 'garbage-collect':
+                        // Forcer le garbage collection
+                        if (global.gc) {
+                            global.gc();
+                            res.json({ success: true, message: '🗑️ Garbage collection effectué' });
+                        } else {
+                            res.json({ success: false, message: 'Garbage collection non disponible' });
+                        }
+                        break;
+                        
+                    case 'update-presence':
+                        // Mettre à jour la présence du bot
+                        await this.client.user.setPresence({
+                            activities: [{
+                                name: `${this.client.guilds.cache.size} serveurs | /help`,
+                                type: 0
+                            }],
+                            status: 'online'
+                        });
+                        res.json({ success: true, message: '👤 Présence mise à jour' });
+                        break;
+                        
+                    default:
+                        res.status(400).json({ error: 'Action système inconnue' });
+                }
+                
+            } catch (error) {
+                console.error(`❌ [Kofu] Erreur action système ${action}:`, error);
+                res.status(500).json({ error: error.message });
+            }
+        });
+        
+        // API Owner - Gestion des tickets
+        this.app.get('/api/owner/tickets', this.requireOwner, (req, res) => {
+            try {
+                const activeTickets = this.client.database.read('tickets/active.json') || {};
+                const closedTickets = this.client.database.read('tickets/closed.json') || {};
+                
+                const active = Object.values(activeTickets).map(ticket => ({
+                    ...ticket,
+                    guild: this.client.guilds.cache.get(ticket.guildId)?.name || 'Serveur inconnu',
+                    user: this.client.users.cache.get(ticket.userId)?.tag || 'Utilisateur inconnu'
+                }));
+                
+                const closed = Object.values(closedTickets).slice(-50).map(ticket => ({
+                    ...ticket,
+                    guild: this.client.guilds.cache.get(ticket.guildId)?.name || 'Serveur inconnu',
+                    user: this.client.users.cache.get(ticket.userId)?.tag || 'Utilisateur inconnu'
+                }));
+                
+                res.json({
+                    active,
+                    closed,
+                    stats: {
+                        totalActive: active.length,
+                        totalClosed: Object.keys(closedTickets).length,
+                        byType: {
+                            support: active.filter(t => t.type === 'support').length,
+                            report: active.filter(t => t.type === 'report').length,
+                            other: active.filter(t => t.type === 'other').length
+                        }
+                    }
+                });
+            } catch (error) {
+                res.status(500).json({ error: error.message });
+            }
+        });
+        
+        // API Owner - Fermeture forcée de ticket
+        this.app.post('/api/owner/tickets/:ticketId/force-close', this.requireOwner, async (req, res) => {
+            const ticketId = req.params.ticketId;
+            const reason = req.body.reason || 'Fermeture forcée par owner';
+            
+            try {
+                const activeTickets = this.client.database.read('tickets/active.json') || {};
+                const ticket = activeTickets[ticketId];
+                
+                if (!ticket) {
+                    return res.status(404).json({ error: 'Ticket non trouvé' });
+                }
+                
+                // Fermer le ticket
+                const closedTickets = this.client.database.read('tickets/closed.json') || {};
+                
+                ticket.status = 'closed';
+                ticket.closedBy = req.session.user.id;
+                ticket.closedAt = new Date().toISOString();
+                ticket.closeReason = reason;
+                ticket.forceClosed = true;
+                
+                closedTickets[ticketId] = ticket;
+                delete activeTickets[ticketId];
+                
+                this.client.database.write('tickets/active.json', activeTickets);
+                this.client.database.write('tickets/closed.json', closedTickets);
+                
+                // Supprimer le salon si possible
+                const guild = this.client.guilds.cache.get(ticket.guildId);
+                if (guild) {
+                    const channel = guild.channels.cache.get(ticket.channelId);
+                    if (channel) {
+                        await channel.delete('Fermeture forcée par owner');
+                    }
+                }
+                
+                // Logger l'action
+                this.client.logger.logOwnerAction(
+                    req.session.user,
+                    'TICKET_FORCE_CLOSED',
+                    { ticketId, reason, guildId: ticket.guildId }
+                );
+                
+                res.json({ success: true, message: `Ticket #${ticketId} fermé avec succès` });
+                
+            } catch (error) {
+                console.error(`❌ [Kofu] Erreur fermeture forcée ticket ${ticketId}:`, error);
+                res.status(500).json({ error: error.message });
+            }
         });
     }
     
